@@ -1,0 +1,71 @@
+=== 📑 Dossier d’Investissement Locatif ===
+
+=== 🏠 Informations sur le bien ===
+Type de bien : Ancien
+Prix d'achat : 69,000 €
+Coût total projet : 82,820 €
+Surface Carrez : 18.38 m²
+Surface pondérée : 20.62 m²
+Prix moyen secteur : 2,200 €/m²
+Ratio marché : 182.53 %
+
+=== 💶 Financement ===
+Apport personnel : 15,000 €
+Montant emprunté : 67,820 €
+Durée du prêt : 25.0 ans (300 mois)
+Mensualité totale : 350.83 €/mois
+Taux d'intérêt : 3.50 %
+Taux assurance : 0.20 %
+
+=== 📌 Charges fixes (€/mois) ===
+- Taxe foncière: 25.00
+- Charges copro: 30.00
+- Assurance PNO: 0.00
+- Frais compta: 0.00
+- Autres charges: 30.00
+Total charges fixes : 85.00 €/mois
+
+=== 📈 Charges variables (€/mois) ===
+- Gestion agence: 0.00
+- Maintenance: 115.00
+- Vacance locative (impact): 0.00
+- GLI: 0.00
+Total charges variables : 115.00 €/mois
+
+=== 📊 Indicateurs financiers ===
+Cashflow net mensuel : -50.83 €
+Rendement brut : 7.24 %
+Rendement net : 4.35 %
+Taux de couverture : 142.52 %
+LTV (projet) : 81.89 %
+ROE (cashflow) : -2.12 %
+
+=== 🧾 Analyse & Recommandations ===
+🔹 Synthèse : 🔴 Investissement risqué
+🔹 Optimisation / plan d’action :
+- Vérifier possibilité de renégociation du prix ou augmentation apport
+- Optimiser travaux / rénovation pour augmenter rendement
+- Ajuster loyer si nécessaire pour couvrir charges et mensualités
+- Valider financement (durée, taux, assurance) pour sécuriser le projet
+🔹 Points d’attention : vacance locative, charges imprévues, marché local
+Score final : 40/100
+Cashflow négatif : déficit mensuel (+0)
+Rendement net 3–5% (+15)
+Prix au-dessus du marché (+0)
+Endettement ≤30% (+20)
+LTV 80–90% (+5)
+
+--- Conseils ---
+❌ Le projet est déficitaire. Négociez le prix ou augmentez l’apport.
+⚠️ Rendement correct mais améliorable (travaux, gestion, loyer).
+❌ Bien surpayé. Négociez le prix ou comparez d’autres opportunités.
+⚠️ Dépendance au crédit. Un apport supplémentaire réduirait le risque.
+
+=== ✅ Conclusion pour la banque ===
+- Projet cohérent et sécurisé avec ratios financiers conformes aux standards bancaires
+- Gestion proactive des risques avec marge de sécurité intégrée
+- Cashflow positif ou déficit faible compensé par apport ou revenu personnel
+=== 📊 Graphiques visuels ===
+- Répartition des charges : voir charges_pie.png
+- Payback period : voir payback_period.png
+Ces graphiques permettent de visualiser rapidement la maîtrise des coûts et la période de retour sur investissement.
