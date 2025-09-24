@@ -65,6 +65,14 @@ class InvestmentPresenter:
             # Générer le rapport maintenant que tout est calculé
             self.generate_investment_report()
             
+            
+            # --- Simulation amortissement avec prépaiement ---
+            simu = self.model.simulate_amortization(int(self.model.years))
+            self.view.draw_amortization_chart(simu)
+            
+            
+
+            
             # pie chart and payback
             pie_file = "charges_pie.png"
             payback_file = "payback_period.png"

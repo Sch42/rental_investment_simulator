@@ -47,9 +47,15 @@ class InvestmentView(ctk.CTk):
         self.figure = None
         self.ax = None
         self.canvas = None
+        
+
         self.payback_figure = None
         self.payback_ax = None
         self.payback_canvas = None
+        
+        self.amort_figure = None
+        self.amort_ax = None
+        self.amort_canvas = None
 
         # pie interactivity storage
         self.pie_wedges = []
@@ -113,6 +119,22 @@ class InvestmentView(ctk.CTk):
             ("Taux d'intérêt annuel (%):", "3.5"),
             ("Assurance prêt (%):", "0.2"),
         ])
+        
+        # Champ pour l’épargne mensuelle
+        frame_extra = ctk.CTkFrame(left)
+        frame_extra.pack(fill="x", padx=6, pady=2)
+        ctk.CTkLabel(frame_extra, text="Épargne mensuelle (€/mois)").pack(side="left", padx=(4, 6))
+        self.extra_entry = ctk.CTkEntry(frame_extra, width=120)
+        self.extra_entry.pack(side="right", padx=(6, 4))
+
+        # Liste déroulante pour le DPE
+        frame_dpe = ctk.CTkFrame(left)
+        frame_dpe.pack(fill="x", padx=6, pady=2)
+        ctk.CTkLabel(frame_dpe, text="DPE").pack(side="left", padx=(4, 6))
+        self.dpe_combo = ctk.CTkComboBox(frame_dpe, values=["A","B","C","D","E","F","G"], width=120)
+        self.dpe_combo.set("D")  # valeur par défaut
+        self.dpe_combo.pack(side="right", padx=(6, 4))
+
 
         calc_btn = ctk.CTkButton(left, text="Calculer")
         calc_btn.pack(pady=18, padx=8, fill="x")
@@ -175,7 +197,7 @@ class InvestmentView(ctk.CTk):
                     lbl.pack(side="left", padx=4)
                     val = ctk.CTkLabel(row, text="-", anchor="w")
                     val.pack(side="left", padx=4)
-                    btn = ctk.CTkButton(row, text="?", width=30)
+                    btn = ctk.CTkButton(row, text="?", width=40)
                     btn.pack(side="right", padx=4)
                     self.indicators[label_text] = val
 
@@ -190,7 +212,7 @@ class InvestmentView(ctk.CTk):
 
         create_indicator_rows(grid_left, left_sections)
         create_indicator_rows(grid_right, right_sections)
-
+    
         # Payback figure
         payback_frame = ctk.CTkFrame(right)
         payback_frame.pack(fill="both", expand=True, padx=8, pady=8)
@@ -207,6 +229,14 @@ class InvestmentView(ctk.CTk):
         self.figure.subplots_adjust(right=0.62)
         self.canvas = FigureCanvasTkAgg(self.figure, master=pie_frame)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
+        
+        # Amortization with prepayment figure
+        amort_frame = ctk.CTkFrame(right)
+        amort_frame.pack(fill="both", expand=True, padx=8, pady=8)
+        self.amort_figure = plt.Figure(figsize=(6, 3), tight_layout=True)
+        self.amort_ax = self.amort_figure.add_subplot(111)
+        self.amort_canvas = FigureCanvasTkAgg(self.amort_figure, master=amort_frame)
+        self.amort_canvas.get_tk_widget().pack(fill="both", expand=True)
 
         self._calculate_button = calc_btn
 
@@ -226,19 +256,23 @@ class InvestmentView(ctk.CTk):
             key = label_text.replace(":", "")
             self.entries[key] = entry
 
-    # ---- Public API used by Presenter ----
+    
     def get_all_inputs(self) -> Dict[str, float]:
         """
         Return a mapping of expected keys to numeric values parsed from entries.
         Keys match the model expectations.
         """
         parsed = {}
-        # Copy known keys from entries
         for key, entry in self.entries.items():
-            # normalize key text to match model keys
             normalized = key.replace(":", "")
             parsed[normalized] = parse_float_from_entry(entry)
+    
+        # Champs additionnels
+        parsed["Épargne mensuelle"] = parse_float_from_entry(self.extra_entry)
+        parsed["DPE"] = self.dpe_combo.get()
+    
         return parsed
+
 
     def get_property_type(self) -> str:
         """Return current property type selection."""
@@ -372,7 +406,7 @@ class InvestmentView(ctk.CTk):
             self.center_text = self.ax.text(0, 0, "", ha="center", va="center", fontsize=12, fontweight='bold')
 
         self.canvas.draw()
-
+        
     def draw_payback(self, cumulative_cashflow: List[float], years: int, payback_year: Optional[int]) -> None:
         """Plot the payback bar chart with proper colors and payback line."""
         self.payback_ax.clear()
@@ -396,7 +430,22 @@ class InvestmentView(ctk.CTk):
         self.payback_ax.set_xlabel("Années")
         self.payback_ax.set_ylabel("Cumul Cashflow (€)")
         self.payback_ax.set_title("Payback Period")
-        self.payback_ax.legend()
         self.payback_canvas.draw()
-
-
+        
+    def draw_amortization_chart(self, simu: List[Dict[str, float]]) -> None:
+        """Trace l’évolution du capital restant dû et du patrimoine net avec prépaiement."""
+        if not simu:
+            return
+    
+        years = [row["Année"] for row in simu]
+        remaining = [row["Capital restant dû"] for row in simu]
+        patrimoine = [row["Patrimoine net"] for row in simu]
+    
+        self.amort_ax.clear()
+        self.amort_ax.plot(years, remaining, label="Capital restant dû", color="red", linewidth=2)
+        self.amort_ax.plot(years, patrimoine, label="Patrimoine net", color="green", linewidth=2)
+        self.amort_ax.set_xlabel("Années")
+        self.amort_ax.set_ylabel("€")
+        self.amort_ax.set_title("Simulation avec prépaiement (épargne mensuelle)")
+        self.amort_ax.legend()
+        self.amort_canvas.draw()

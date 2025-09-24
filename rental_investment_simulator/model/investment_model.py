@@ -118,7 +118,9 @@ class InvestmentModel:
         monthly_income: float = 1.0,
         prix_moyen_m2: float = 200.0,
         type_of_property: str = "Ancien",
-        finance_all: bool = True):
+        finance_all: bool = True,
+        extra_monthly_contribution: int = 0,
+        dpe: str = "D"):
         """
         Initialise une instance du modèle d'investissement immobilier.
 
@@ -365,6 +367,8 @@ class InvestmentModel:
         self.prix_moyen_m2 = float(prix_moyen_m2)
         self.type_of_property = str(type_of_property)
         self.finance_all = bool(finance_all)
+        self.extra_monthly_contrib = int(extra_monthly_contribution)
+        self.dpe = str(dpe)
         
         self.scoring_weights = {
             "cashflow": 30,
@@ -472,12 +476,18 @@ class InvestmentModel:
     def effective_annual_rent(self) -> float:
         """Loyer annuel effectif tenant compte de la vacance locative."""
         return self.rent * 12 * self.occupancy_rate
-
+    
     @property
     def monthly_cashflow(self) -> float:
-        """Cashflow mensuel net (loyer effectif - charges - mensualité)."""
-        return self.effective_annual_rent / 12 - self.monthly_charges - self.monthly_payment
+        """Cashflow mensuel net (loyer effectif - charges - mensualité + apport mensuel)."""
+        return (
+            self.effective_annual_rent / 12 
+            - self.monthly_charges 
+            - self.monthly_payment
+            + self.extra_monthly_contrib
+        )
 
+    
     # --- Ratios financiers ---
 
     @property
@@ -511,31 +521,42 @@ class InvestmentModel:
         """Fonds propres investis (apport + frais + notaire + rénovation + meubles)."""
         return self.apport + self.renovation + self.furn + self.other_fees + self.notary
 
-    @property
-    def roe_cashflow(self) -> float:
-        """ROE cashflow (%) : Rentabilité des fonds propres basée sur le cashflow net annuel."""
-        return ((self.effective_annual_rent - self.monthly_charges * 12 - self.monthly_payment * 12) / self.equity * 100) if self.equity > 0 else 0.0
-
     def principal_repaid_first_n_months(self, n=12) -> float:
-        """Calcul exact du capital remboursé sur les n premiers mois via le plan d'amortissement."""
+        """
+        Capital remboursé sur n mois, en tenant compte du prépaiement mensuel.
+        """
         outstanding = self.loan_amount
         monthly_rate = self.rate / 12.0
-        payment = self.monthly_payment_capital
         repaid = 0.0
+    
         for _ in range(min(n, int(self.n_months))):
             interest = outstanding * monthly_rate
-            principal = payment - interest
+            principal = self.monthly_payment_capital - interest
+            principal += self.extra_monthly_contrib   # prépaiement direct
             if principal <= 0:
                 break
             repaid += principal
             outstanding -= principal
+    
         return repaid
 
+
+    @property
+    def roe_cashflow(self) -> float:
+        """
+        ROE basé sur le cashflow réel (négatif si effort d'épargne important).
+        """
+        annual_cf = self.monthly_cashflow * 12
+        return (annual_cf / self.equity * 100) if self.equity > 0 else 0.0
+    
     @property
     def roe_patrimonial(self) -> float:
-        """ROE patrimonial (%) : Rentabilité incluant le remboursement du capital."""
+        """
+        ROE intégrant le capital remboursé + cashflow net après prépaiement.
+        """
         annual_capital_repaid = self.principal_repaid_first_n_months(12)
-        return ((self.effective_annual_rent - self.monthly_charges * 12 - self.monthly_payment * 12 + annual_capital_repaid) / self.equity * 100) if self.equity > 0 else 0.0
+        annual_cf = self.monthly_cashflow * 12
+        return ((annual_cf + annual_capital_repaid) / self.equity * 100) if self.equity > 0 else 0.0
 
     # -----------------------
     # Helpers
@@ -596,20 +617,26 @@ class InvestmentModel:
                 self.ins_rate = float(value) / 100
             elif "prix moyen" in norm_key:
                 self.prix_moyen_m2 = float(value)
+            elif "épargne mensuelle" in norm_key:
+                self.extra_monthly_contrib = float(value)
+            elif "dpe" in norm_key:
+                self.dpe = str(value).upper()
 
-    def _evaluate_investment(self, adjusted_debt_ratio: float) -> tuple[str, str, str]:
+
+    def _evaluate_investment(self, adjusted_debt_ratio: float) -> tuple[str, str, str, Optional[float]]:
         """
         Évalue la viabilité de l’investissement avec un score pondéré et
         génère un diagnostic détaillé + conseils.
-        Retourne (rec_text, rec_color, rec_details_text).
+        Retourne (rec_text, rec_color, rec_details_text, proposed_price).
         """
         score = 0
         details: List[str] = []
         advice: List[str] = []
-    
+        proposed_price: Optional[float] = None
+
         # === Pondérations ===
         w = self.scoring_weights
-    
+
         # Cashflow
         if self.monthly_cashflow > 100:
             score += w["cashflow"]; details.append(f"Cashflow >100€ (+{w['cashflow']})")
@@ -619,7 +646,7 @@ class InvestmentModel:
         else:
             details.append("Cashflow négatif : déficit mensuel (+0)")
             advice.append("❌ Le projet est déficitaire. Négociez le prix ou augmentez l’apport.")
-    
+
         # Rendement net
         if self.net_yield >= 5:
             score += w["net_yield"]; details.append(f"Rendement net ≥5% (+{w['net_yield']})")
@@ -629,7 +656,7 @@ class InvestmentModel:
         else:
             score += w["net_yield"] // 5; details.append(f"Rendement net <3% (+{w['net_yield']//5})")
             advice.append("❌ Rendement trop faible. Prix trop haut ou loyer trop bas.")
-    
+
         # Ratio marché
         if self.ratio_marche <= 95:
             score += w["ratio_marche"]; details.append(f"Prix sous marché : opportunité (+{w['ratio_marche']})")
@@ -638,7 +665,7 @@ class InvestmentModel:
         else:
             details.append("Prix au-dessus du marché (+0)")
             advice.append("❌ Bien surpayé. Négociez le prix ou comparez d’autres opportunités.")
-    
+
         # Endettement
         if adjusted_debt_ratio <= 30:
             score += w["debt_ratio"]; details.append(f"Endettement ≤30% (+{w['debt_ratio']})")
@@ -648,7 +675,7 @@ class InvestmentModel:
         else:
             details.append("Endettement >40% : risqué (+0)")
             advice.append("❌ Endettement trop élevé. Réduisez le montant du crédit ou augmentez l’apport.")
-    
+
         # LTV
         if self.ltv_project <= 80:
             score += w["ltv"]; details.append(f"LTV ≤80% (+{w['ltv']})")
@@ -658,8 +685,8 @@ class InvestmentModel:
         else:
             details.append("LTV >90% : risqué (+0)")
             advice.append("❌ Apport trop faible. Essayez d’investir plus de fonds propres.")
-    
-        # Synthèse
+
+        # Synthèse globale
         total_max = sum(w.values())
         if score >= 0.75 * total_max:
             rec_text = "🟢 Investissement attractif"
@@ -670,15 +697,97 @@ class InvestmentModel:
         else:
             rec_text = "🔴 Investissement risqué"
             rec_color = "red"
-    
+
         rec_details_text = (
             f"Score final : {score}/{total_max}\n"
             + "\n".join(details)
             + "\n\n--- Conseils ---\n"
             + ("\n".join(advice) if advice else "✅ Aucun ajustement nécessaire.")
         )
+
+        # --- Proposition de prix d'achat (argumentée) ---
+        negotiation_argument = ""
+        if self.ratio_marche > 105:
+            target_ratio = 95
+            proposed_price = self.price * (target_ratio / self.ratio_marche)
+            negotiation_argument = (
+                f"💡 Le bien est au-dessus du marché (ratio {self.ratio_marche:.1f} %). "
+                f"Un prix cible de ~{proposed_price:,.0f} € serait cohérent avec un ratio de {target_ratio} %.\n"
+                "Cet ajustement permettrait d’obtenir un cashflow proche de l’équilibre "
+                "et un rendement net plus attractif (>4 %)."
+            )
+        elif self.ratio_marche > 100:
+            proposed_price = self.price * (100 / self.ratio_marche)
+            negotiation_argument = (
+                f"💡 Le bien est légèrement au-dessus du marché ({self.ratio_marche:.1f} %). "
+                f"Un prix ajusté à ~{proposed_price:,.0f} € le ramènerait au prix du marché."
+            )
+        else:
+            negotiation_argument = (
+                "✅ Le prix est déjà cohérent avec le marché. "
+                "La négociation peut se concentrer sur la prise en charge de certains frais (ex: notaire ou copropriété)."
+            )
+
+        rec_details_text += "\n\n--- Proposition de prix ---\n" + negotiation_argument
+
+        return rec_text, rec_color, rec_details_text, proposed_price
     
-        return rec_text, rec_color, rec_details_text
+    # dans InvestmentModel (ajout en bas)
+    def simulate_amortization(self, years: int = 20) -> List[Dict[str, float]]:
+        """
+        Simule année par année l'impact du prépaiement (extra_monthly_contrib).
+        Retourne une liste de dictionnaires : année, capital restant dû, cashflow cumulé, patrimoine net.
+        """
+        outstanding = self.loan_amount
+        monthly_rate = self.rate / 12.0
+        results = []
+    
+        cum_cashflow = 0.0
+        cum_principal = 0.0
+    
+        for year in range(1, years + 1):
+            annual_cf = 0.0
+            annual_principal = 0.0
+    
+            for _ in range(12):
+                if outstanding <= 0:
+                    break
+    
+                interest = outstanding * monthly_rate
+                principal = self.monthly_payment_capital - interest + self.extra_monthly_contrib
+    
+                # Cashflow net (loyer - charges - mensualité - effort d’épargne)
+                monthly_cf = (self.effective_annual_rent / 12
+                              - self.monthly_charges
+                              - self.monthly_payment
+                              - self.extra_monthly_contrib)
+    
+                annual_cf += monthly_cf
+                annual_principal += principal
+                outstanding -= principal
+    
+                if outstanding < 0:
+                    outstanding = 0
+    
+            cum_cashflow += annual_cf
+            cum_principal += annual_principal
+            patrimoine = cum_cashflow + cum_principal
+    
+            results.append({
+                "Année": year,
+                "Capital restant dû": outstanding,
+                "Cashflow annuel": annual_cf,
+                "Cashflow cumulé": cum_cashflow,
+                "Capital remboursé cumulé": cum_principal,
+                "Patrimoine net": patrimoine,
+            })
+    
+            if outstanding <= 0:
+                break
+    
+        return results
+
+
         
     def compute(self, inputs: dict) -> dict:
         """
@@ -715,17 +824,18 @@ class InvestmentModel:
         total = -self.equity
         payback_year: Optional[int] = None
         years_int = int(self.years) if self.years >= 1 else 1
+        
         for y in range(1, years_int + 1):
-            annual_cf = self.monthly_cashflow * 12
+            annual_cf = (self.monthly_cashflow) * 12
             total += annual_cf
             cumulative_cashflow.append(total)
             if total >= 0 and payback_year is None:
                 payback_year = y
-    
+
         payback_year = next((i + 1 for i, val in enumerate(cumulative_cashflow) if val >= 0), None)
     
-        # === Recommandation factorisée ===
-        rec_text, rec_color, rec_details_text = self._evaluate_investment(adjusted_debt_ratio)
+        rec_text, rec_color, rec_details_text, proposed_price = self._evaluate_investment(adjusted_debt_ratio)
+        
     
         # === Résultats finaux ===
         return {
@@ -756,6 +866,7 @@ class InvestmentModel:
             "rec_text": rec_text,
             "rec_color": rec_color,
             "rec_details_text": rec_details_text,
+            "proposed_price": proposed_price,  # ✅ ajouté
             "cashflow": self.monthly_cashflow,
             "taux_couv": self.taux_couv,
             "debt_ratio": adjusted_debt_ratio,
