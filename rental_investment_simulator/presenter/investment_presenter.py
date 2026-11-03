@@ -439,7 +439,8 @@ class InvestmentPresenter:
                 "💡 Cet indicateur est plus complet car il inclut les frais annexes dans l’analyse."
             ),
             "Equity (€):": (
-                "Equity = Apport + Frais de notaire + Rénovation + Meubles + Autres frais\n\n"
+                "Equity = Prix total projet - Montant emprunté\n"
+                "(= l'apport si tout est financé, sinon apport + notaire + travaux + meubles + autres frais)\n\n"
                 "💡 Plus votre equity est élevé, moins vous êtes dépendant du financement bancaire."
             )
         }
