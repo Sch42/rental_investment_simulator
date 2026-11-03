@@ -642,6 +642,55 @@ class InvestmentModel:
                 self.dpe = str(value).upper()
 
 
+    def validate(self) -> None:
+        """Vérifie la cohérence des valeurs chargées (ex. via load_inputs).
+
+        Lève ValueError avec la liste de tous les problèmes détectés.
+        """
+        errors: List[str] = []
+        labels = {
+            "price": "Prix d'achat", "furn": "Meubles", "other_fees": "Autres frais",
+            "renovation": "Rénovation", "surface_carrez": "Surface Carrez",
+            "surface_non_validee": "Surface non prise en compte", "taxe": "Taxe foncière",
+            "copro": "Charges copropriété", "gestion_pct": "Gestion en agence", "gli": "GLI",
+            "pno": "Assurance PNO", "compta": "Frais compta", "autres": "Autres charges",
+            "maintenance_pct": "Maintenance", "vacancy_months": "Vacance locative",
+            "rent": "Loyer mensuel", "apport": "Apport", "years": "Durée du prêt",
+            "rate": "Taux d'intérêt", "ins_rate": "Assurance prêt",
+            "monthly_income": "Revenu net mensuel", "prix_moyen_m2": "Prix moyen au m²",
+            "extra_monthly_contrib": "Épargne mensuelle",
+        }
+        for attr, label in labels.items():
+            if not math.isfinite(getattr(self, attr)):
+                errors.append(f"{label} : valeur non finie.")
+        if errors:
+            raise ValueError("\n".join(errors))
+
+        for attr in ("price", "surface_carrez", "rent", "monthly_income", "prix_moyen_m2"):
+            if getattr(self, attr) <= 0:
+                errors.append(f"{labels[attr]} doit être strictement positif.")
+        for attr in ("furn", "other_fees", "renovation", "surface_non_validee", "taxe", "copro",
+                     "gli", "pno", "compta", "autres", "maintenance_pct", "apport",
+                     "extra_monthly_contrib"):
+            if getattr(self, attr) < 0:
+                errors.append(f"{labels[attr]} ne peut pas être négatif.")
+        if not 0 <= self.gestion_pct <= 100:
+            errors.append("Gestion en agence doit être entre 0 et 100 %.")
+        if not 0 <= self.vacancy_months <= 12:
+            errors.append("Vacance locative doit être entre 0 et 12 mois.")
+        if self.years < 1:
+            errors.append("Durée du prêt doit être d'au moins 1 an.")
+        if not 0 <= self.rate <= 1:
+            errors.append("Taux d'intérêt doit être entre 0 et 100 %.")
+        if not 0 <= self.ins_rate <= 1:
+            errors.append("Assurance prêt doit être entre 0 et 100 %.")
+        if self.type_of_property not in ("Ancien", "Neuf"):
+            errors.append("Type de bien doit être 'Ancien' ou 'Neuf'.")
+        if self.dpe not in ("A", "B", "C", "D", "E", "F", "G"):
+            errors.append("DPE doit être une lettre de A à G.")
+        if errors:
+            raise ValueError("\n".join(errors))
+
     def _evaluate_investment(self, adjusted_debt_ratio: float) -> tuple[str, str, str, Optional[float]]:
         """
         Évalue la viabilité de l’investissement avec un score pondéré et
@@ -816,6 +865,7 @@ class InvestmentModel:
         # Charger les inputs dans le modèle
         prop_type = inputs.get("Type de bien", "Ancien")
         self.load_inputs(inputs, prop_type)
+        self.validate()
     
         # === Core metrics ===
         total_loan_cost = self.monthly_payment * self.n_months

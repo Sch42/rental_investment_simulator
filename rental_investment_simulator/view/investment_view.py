@@ -1,21 +1,23 @@
 from typing import Dict, Tuple, List, Optional
 import customtkinter as ctk
+from tkinter import messagebox
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def parse_float_from_entry(entry_widget) -> float:
     """
-    Safely parse a float from a CTkEntry-like widget.
-    Returns 0.0 on empty or invalid input.
+    Parse a float from a CTkEntry-like widget.
+    Accepte la virgule décimale et les espaces ; un champ vide vaut 0.0.
+    Lève ValueError si la saisie n'est pas un nombre.
     """
-    try:
-        s = entry_widget.get()
-        if s is None or s == "":
-            return 0.0
-        s = str(s).replace(",", ".").replace(" ", "")
-        return float(s)
-    except Exception:
+    raw = entry_widget.get()
+    s = "" if raw is None else str(raw).replace(",", ".").replace(" ", "").replace("\u00a0", "")
+    if s == "":
         return 0.0
+    try:
+        return float(s)
+    except ValueError:
+        raise ValueError(f"« {raw} » n'est pas un nombre") from None
 
 # -----------------------
 # View
@@ -263,14 +265,23 @@ class InvestmentView(ctk.CTk):
         Keys match the model expectations.
         """
         parsed = {}
+        errors = []
         for key, entry in self.entries.items():
             normalized = key.replace(":", "")
-            parsed[normalized] = parse_float_from_entry(entry)
-    
+            try:
+                parsed[normalized] = parse_float_from_entry(entry)
+            except ValueError as exc:
+                errors.append(f"{normalized} : {exc}")
+
         # Champs additionnels
-        parsed["Épargne mensuelle"] = parse_float_from_entry(self.extra_entry)
+        try:
+            parsed["Épargne mensuelle"] = parse_float_from_entry(self.extra_entry)
+        except ValueError as exc:
+            errors.append(f"Épargne mensuelle : {exc}")
         parsed["DPE"] = self.dpe_combo.get()
-    
+
+        if errors:
+            raise ValueError("\n".join(errors))
         return parsed
 
 
@@ -330,6 +341,10 @@ class InvestmentView(ctk.CTk):
 
         btn = ctk.CTkButton(top, text="Fermer", command=top.destroy)
         btn.pack(pady=(0, 12))
+
+    def show_error(self, title: str, text: str) -> None:
+        """Affiche une boîte de dialogue d'erreur."""
+        messagebox.showerror(title, text)
 
     def update_indicator(self, label_text: str, value_text: str, color: Optional[str] = None) -> None:
         """

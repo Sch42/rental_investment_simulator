@@ -1,4 +1,3 @@
-from tkinter import messagebox
 from typing import Dict, Any
 from model.investment_model import InvestmentModel, safe_parse_float, color_gradient, VALORISATION_NON_CARREZ
 from view.investment_view import InvestmentView
@@ -75,8 +74,10 @@ class InvestmentPresenter:
             self.view.draw_payback(results['cumulative_cashflow'], int(self.model.years), results['payback_year'])
 
 
-        except Exception as exc:
-            messagebox.showerror("Erreur", f"Veuillez entrer des nombres valides.\n{str(exc)}")
+        except ValueError as exc:
+            self.view.show_error("Saisie invalide", str(exc))
+        except Exception as exc:  # bug inattendu : ne pas le faire passer pour une erreur de saisie
+            self.view.show_error("Erreur inattendue", f"{type(exc).__name__} : {exc}")
         
 
     def _color_cashflow(self, cashflow: float, monthly_payment: float, monthly_income: float) -> str:
