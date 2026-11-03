@@ -1,21 +1,6 @@
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 import math
 
-
-def safe_parse_float(value: Any) -> float:
-    """
-    Parse a value (string or number) to float safely.
-    Returns 0.0 for invalid values.
-    """
-    try:
-        if value is None or value == "":
-            return 0.0
-        if isinstance(value, (int, float)):
-            return float(value)
-        s = str(value).replace(",", ".").replace(" ", "")
-        return float(s)
-    except Exception:
-        return 0.0
 
 class InvestmentModel:
     """
@@ -34,6 +19,24 @@ class InvestmentModel:
     """
 
     VALORISATION_NON_CARREZ = 0.3  # pondération des surfaces hors Carrez
+
+    # Champs numériques acceptés en entrée, avec leur libellé (messages d'erreur)
+    FIELD_LABELS: Dict[str, str] = {
+        "price": "Prix d'achat", "furn": "Meubles", "other_fees": "Autres frais",
+        "renovation": "Rénovation", "surface_carrez": "Surface Carrez",
+        "surface_non_validee": "Surface non prise en compte", "taxe": "Taxe foncière",
+        "copro": "Charges copropriété", "gestion_pct": "Gestion en agence", "gli": "GLI",
+        "pno": "Assurance PNO", "compta": "Frais compta", "autres": "Autres charges",
+        "maintenance_pct": "Maintenance", "vacancy_months": "Vacance locative",
+        "rent": "Loyer mensuel", "apport": "Apport", "years": "Durée du prêt",
+        "rate": "Taux d'intérêt", "ins_rate": "Assurance prêt",
+        "monthly_income": "Revenu net mensuel", "prix_moyen_m2": "Prix moyen au m²",
+        "extra_monthly_contrib": "Épargne mensuelle",
+    }
+    DPE_CLASSES = ("A", "B", "C", "D", "E", "F", "G")
+    INTEGER_FIELDS = ("vacancy_months", "years")
+    # Taux saisis en % dans l'interface mais stockés en décimal dans le modèle
+    PERCENT_TO_DECIMAL_FIELDS = ("rate", "ins_rate")
 
     def __init__(
         self,
@@ -54,14 +57,14 @@ class InvestmentModel:
         vacancy_months: int = 0,
         rent: float = 500.0,
         apport: float = 0.0,
-        years: int = 0,
+        years: int = 20,
         rate: float = 0.0,
         ins_rate: float = 0.0,
         monthly_income: float = 1.0,
         prix_moyen_m2: float = 200.0,
         type_of_property: str = "Ancien",
         finance_all: bool = True,
-        extra_monthly_contribution: int = 0,
+        extra_monthly_contrib: float = 0.0,
         dpe: str = "D"):
         """
         Initialise une instance du modèle d'investissement immobilier.
@@ -81,64 +84,42 @@ class InvestmentModel:
             compta (float, optional): Frais compta (annuels). Defaults to 0.0.
             autres (float, optional): Autres charges annuelles. Defaults to 0.0.
             maintenance_pct (float, optional): % maintenance. Defaults to 0.0.
-            vacancy_months (float, optional): Mois de vacance/an. Defaults to 0.0.
+            vacancy_months (int, optional): Mois de vacance/an (0 à 12). Defaults to 0.
             rent (float, optional): Loyer mensuel brut. Defaults to 0.0.
             apport (float, optional): Apport personnel. Defaults to 0.0.
-            years (float, optional): Durée prêt en années. Defaults to 0.0.
-            rate (float, optional): Taux nominal du prêt. Defaults to 0.0.
-            ins_rate (float, optional): Taux assurance du prêt. Defaults to 0.0.
+            years (int, optional): Durée prêt en années (≥ 1). Defaults to 20.
+            rate (float, optional): Taux nominal du prêt, en décimal (0.035 = 3,5 %). Defaults to 0.0.
+            ins_rate (float, optional): Taux assurance du prêt, en décimal. Defaults to 0.0.
             monthly_income (float, optional): Revenu mensuel investisseur. Defaults to 0.0.
             prix_moyen_m2 (float, optional): Prix moyen marché. Defaults to 0.0.
             type_of_property (str, optional): "Ancien" ou "Neuf". Defaults to "Ancien".
-            finance_all (bool, optional): True si financement 100%. Defaults to True.   
+            finance_all (bool, optional): True si financement 100%. Defaults to True.
+            extra_monthly_contrib (float, optional): Épargne mensuelle affectée au
+                remboursement anticipé (€/mois). Defaults to 0.0.
+            dpe (str, optional): Classe DPE, de "A" à "G". Defaults to "D".
 
         """
-        numbers = {
+        values = {
             "price": price, "furn": furn, "other_fees": other_fees, "renovation": renovation,
             "surface_carrez": surface_carrez, "surface_non_validee": surface_non_validee,
             "taxe": taxe, "copro": copro, "gestion_pct": gestion_pct, "gli": gli, "pno": pno,
             "compta": compta, "autres": autres, "maintenance_pct": maintenance_pct,
             "vacancy_months": vacancy_months, "rent": rent, "apport": apport, "years": years,
             "rate": rate, "ins_rate": ins_rate, "monthly_income": monthly_income,
-            "prix_moyen_m2": prix_moyen_m2,
+            "prix_moyen_m2": prix_moyen_m2, "extra_monthly_contrib": extra_monthly_contrib,
         }
-        integer_fields = {"vacancy_months", "years"}
-
-        # --- Types ---
-        for name, value in numbers.items():
-            if name in integer_fields:
+        for name, value in values.items():
+            if name in self.INTEGER_FIELDS:
                 if not isinstance(value, int):
                     raise TypeError(f"The {name} must be a integer not {type(value)}.")
             elif not isinstance(value, (int, float)):
                 raise TypeError(f"The {name} must be a number not {type(value)}.")
         if not isinstance(type_of_property, str):
             raise TypeError(f"The type_of_property must be a str not {type(type_of_property)}.")
+        if not isinstance(dpe, str):
+            raise TypeError(f"The dpe must be a str not {type(dpe)}.")
         if not isinstance(finance_all, bool):
             raise TypeError(f"The finance_all must be a bool not {type(finance_all)}.")
-
-        # --- Valeurs finies ---
-        for name, value in numbers.items():
-            if math.isinf(value):
-                raise ValueError(f"The {name} cannot be inf.")
-            if math.isnan(value):
-                raise ValueError(f"The {name} cannot be nan.")
-
-        # --- Bornes ---
-        for name in ("price", "surface_carrez", "rent", "monthly_income", "prix_moyen_m2"):
-            if numbers[name] <= 0:
-                raise ValueError(f"The {name} must be > 0.")
-        for name in ("furn", "other_fees", "renovation", "surface_non_validee", "taxe", "copro",
-                     "gestion_pct", "gli", "pno", "compta", "autres", "maintenance_pct",
-                     "apport", "years"):
-            if numbers[name] < 0:
-                raise ValueError(f"The {name} cannot be negative.")
-        if not 0 <= vacancy_months <= 12:
-            raise ValueError("Vacancy months must be between 0 and 12.")
-        for name in ("rate", "ins_rate"):
-            if not 0 <= numbers[name] <= 1:
-                raise ValueError(f"The {name} must be between 0 and 1 (decimal rate).")
-        if type_of_property not in ("Ancien", "Neuf"):
-            raise ValueError("Property type must be 'Ancien' or 'Neuf'.")
 
         # --- Affectations ---
         self.price = float(price)
@@ -155,18 +136,18 @@ class InvestmentModel:
         self.compta = float(compta)
         self.autres = float(autres)
         self.maintenance_pct = float(maintenance_pct)
-        self.vacancy_months = float(vacancy_months)
+        self.vacancy_months = int(vacancy_months)
         self.rent = float(rent)
         self.apport = float(apport)
-        self.years = float(years)
+        self.years = int(years)
         self.rate = float(rate)
         self.ins_rate = float(ins_rate)
         self.monthly_income = float(monthly_income)
         self.prix_moyen_m2 = float(prix_moyen_m2)
         self.type_of_property = str(type_of_property)
         self.finance_all = bool(finance_all)
-        self.extra_monthly_contrib = int(extra_monthly_contribution)
-        self.dpe = str(dpe)
+        self.extra_monthly_contrib = float(extra_monthly_contrib)
+        self.dpe = dpe.strip().upper()
         
         self.scoring_weights = {
             "cashflow": 30,
@@ -175,6 +156,48 @@ class InvestmentModel:
             "debt_ratio": 20,
             "ltv": 10
         }
+
+        self.validate()
+
+    @classmethod
+    def from_inputs(cls, inputs: Mapping[str, Any]) -> "InvestmentModel":
+        """Construit un modèle à partir des saisies de l'interface.
+
+        Les clés sont les noms d'attributs (voir FIELD_LABELS) plus "type_of_property" et "dpe".
+        Les champs absents prennent leur valeur par défaut ; une clé inconnue est refusée.
+        Unités : `rate` et `ins_rate` sont saisis en % ; `years` et `vacancy_months`
+        doivent être des nombres entiers.
+
+        Lève ValueError (message en français) si une saisie est invalide.
+        """
+        allowed = set(cls.FIELD_LABELS) | {"type_of_property", "dpe"}
+        unknown = sorted(set(inputs) - allowed)
+        if unknown:
+            raise ValueError(f"Champs inconnus : {', '.join(unknown)}")
+
+        kwargs: Dict[str, Any] = {}
+        errors: List[str] = []
+        for name, raw in inputs.items():
+            if name in ("type_of_property", "dpe"):
+                kwargs[name] = str(raw)
+                continue
+            label = cls.FIELD_LABELS[name]
+            try:
+                value = float(raw)
+            except (TypeError, ValueError):
+                errors.append(f"{label} : « {raw} » n'est pas un nombre.")
+                continue
+            if name in cls.INTEGER_FIELDS:
+                if not (math.isfinite(value) and value.is_integer()):
+                    errors.append(f"{label} doit être un nombre entier.")
+                    continue
+                value = int(value)
+            elif name in cls.PERCENT_TO_DECIMAL_FIELDS:
+                value = value / 100
+            kwargs[name] = value
+        if errors:
+            raise ValueError("\n".join(errors))
+        return cls(**kwargs)
 
     # -----------------------
     # Getters (calculs)
@@ -385,85 +408,13 @@ class InvestmentModel:
     # Helpers
     # -----------------------
 
-    def load_inputs(self, inputs: Dict[str, Any], type_of_property: str) -> None:
-        """
-        Charge un dictionnaire d'inputs dans les attributs du modèle.
-
-        Args:
-            inputs (Dict[str, Any]): Dictionnaire des valeurs d'entrée.
-            type_of_property (str): Type de bien ("Ancien" ou "Neuf").
-        """
-        self.type_of_property = type_of_property
-        for key, value in inputs.items():
-            norm_key = key.replace(":", "").lower()
-            if "prix d'achat" in norm_key:
-                self.price = float(value)
-            elif "meubles" in norm_key:
-                self.furn = float(value)
-            elif "autres frais" in norm_key:
-                self.other_fees = float(value)
-            elif "rénovation" in norm_key:
-                self.renovation = float(value)
-            elif "surface carrez" in norm_key:
-                self.surface_carrez = float(value)
-            elif "surface non" in norm_key:
-                self.surface_non_validee = float(value)
-            elif "taxe foncière" in norm_key:
-                self.taxe = float(value)
-            elif "charges copro" in norm_key:
-                self.copro = float(value)
-            elif "gestion" in norm_key:
-                self.gestion_pct = float(value)
-            elif "gli" in norm_key:
-                self.gli = float(value)
-            elif "pno" in norm_key:
-                self.pno = float(value)
-            elif "compta" in norm_key:
-                self.compta = float(value)
-            elif "autres charges" in norm_key:
-                self.autres = float(value)
-            elif "maintenance" in norm_key:
-                self.maintenance_pct = float(value)
-            elif "vacance" in norm_key:
-                self.vacancy_months = float(value)
-            elif "loyer" in norm_key:
-                self.rent = float(value)
-            elif "apport" in norm_key:
-                self.apport = float(value)
-            elif "revenu net" in norm_key:
-                self.monthly_income = float(value)
-            elif "durée" in norm_key:
-                self.years = float(value)
-            elif "taux d'intérêt" in norm_key:
-                self.rate = float(value) / 100
-            elif "assurance prêt" in norm_key:
-                self.ins_rate = float(value) / 100
-            elif "prix moyen" in norm_key:
-                self.prix_moyen_m2 = float(value)
-            elif "épargne mensuelle" in norm_key:
-                self.extra_monthly_contrib = float(value)
-            elif "dpe" in norm_key:
-                self.dpe = str(value).upper()
-
-
     def validate(self) -> None:
-        """Vérifie la cohérence des valeurs chargées (ex. via load_inputs).
+        """Vérifie la cohérence des valeurs du modèle (appelée par __init__).
 
         Lève ValueError avec la liste de tous les problèmes détectés.
         """
         errors: List[str] = []
-        labels = {
-            "price": "Prix d'achat", "furn": "Meubles", "other_fees": "Autres frais",
-            "renovation": "Rénovation", "surface_carrez": "Surface Carrez",
-            "surface_non_validee": "Surface non prise en compte", "taxe": "Taxe foncière",
-            "copro": "Charges copropriété", "gestion_pct": "Gestion en agence", "gli": "GLI",
-            "pno": "Assurance PNO", "compta": "Frais compta", "autres": "Autres charges",
-            "maintenance_pct": "Maintenance", "vacancy_months": "Vacance locative",
-            "rent": "Loyer mensuel", "apport": "Apport", "years": "Durée du prêt",
-            "rate": "Taux d'intérêt", "ins_rate": "Assurance prêt",
-            "monthly_income": "Revenu net mensuel", "prix_moyen_m2": "Prix moyen au m²",
-            "extra_monthly_contrib": "Épargne mensuelle",
-        }
+        labels = self.FIELD_LABELS
         for attr, label in labels.items():
             if not math.isfinite(getattr(self, attr)):
                 errors.append(f"{label} : valeur non finie.")
@@ -490,7 +441,7 @@ class InvestmentModel:
             errors.append("Assurance prêt doit être entre 0 et 100 %.")
         if self.type_of_property not in ("Ancien", "Neuf"):
             errors.append("Type de bien doit être 'Ancien' ou 'Neuf'.")
-        if self.dpe not in ("A", "B", "C", "D", "E", "F", "G"):
+        if self.dpe not in self.DPE_CLASSES:
             errors.append("DPE doit être une lettre de A à G.")
         if errors:
             raise ValueError("\n".join(errors))
@@ -661,16 +612,11 @@ class InvestmentModel:
 
 
         
-    def compute(self, inputs: dict) -> dict:
+    def compute(self) -> dict:
         """
-        Calcule toutes les métriques financières et retourne un dictionnaire
-        avec uniquement des valeurs numériques et quelques données pour la vue.
+        Calcule toutes les métriques financières à partir de l'état du modèle,
+        sans le modifier, et retourne un dictionnaire de résultats pour la vue.
         """
-        # Charger les inputs dans le modèle
-        prop_type = inputs.get("Type de bien", "Ancien")
-        self.load_inputs(inputs, prop_type)
-        self.validate()
-    
         # === Core metrics ===
         total_loan_cost = self.monthly_payment * self.n_months
         adjusted_debt_ratio = self.monthly_payment / (self.monthly_income or 1) * 100
@@ -695,9 +641,8 @@ class InvestmentModel:
         cumulative_cashflow: List[float] = []
         total = -self.equity
         payback_year: Optional[int] = None
-        years_int = int(self.years) if self.years >= 1 else 1
         annual_cf = self.monthly_cashflow * 12
-        for y in range(1, years_int + 1):
+        for y in range(1, max(1, self.years) + 1):
             total += annual_cf
             cumulative_cashflow.append(total)
             if total >= 0 and payback_year is None:

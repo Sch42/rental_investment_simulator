@@ -1,7 +1,7 @@
 import math
 
 import pytest
-from model.investment_model import InvestmentModel, safe_parse_float
+from model.investment_model import InvestmentModel
 
 @pytest.fixture
 def default_model():
@@ -10,11 +10,11 @@ def default_model():
 
 def test_default_model_is_consistent(default_model):
     m = default_model
-    # Valeurs par défaut : price=1, rent=500, years=0, apport=0, Ancien, finance_all=True
+    # Valeurs par défaut : price=1, rent=500, years=20, apport=0, Ancien, finance_all=True
     assert m.notary == pytest.approx(m.price * 0.08)
     assert m.total_project == pytest.approx(m.price + m.notary)
     assert m.loan_amount == pytest.approx(m.total_project)
-    assert isinstance(m.n_months, int) and m.n_months == 1
+    assert isinstance(m.n_months, int) and m.n_months == 240
     assert m.occupancy_rate == pytest.approx(1.0)
     assert m.effective_annual_rent == pytest.approx(m.rent * 12)
     assert m.monthly_payment == pytest.approx(m.monthly_payment_capital + m.monthly_insurance)
@@ -22,80 +22,93 @@ def test_default_model_is_consistent(default_model):
                  "monthly_cashflow", "price_carrez", "ratio_marche"):
         assert math.isfinite(getattr(m, name)), name
 
-def test_load_inputs_accepts_valid_strings_and_numbers():
-    m = InvestmentModel()
+def test_from_inputs_accepts_valid_strings_and_numbers():
     inputs = {
-        "Prix d'achat": "100000",
-        "Meubles": 10000,
-        "Autres frais": "5000",
-        "Rénovation": "15000",
-        "Surface Carrez": "50",
-        "Surface non prise en compte": "10",
-        "Taxe foncière": "1200",
-        "Charges copro": "600",
-        "Gestion": "7",
-        "GLI": "0",
-        "Assurance PNO": "0",
-        "Frais compta": "0",
-        "Autres charges": "0",
-        "Maintenance": "1",
-        "Vacance locative": "1",
-        "Loyer": "1000",
-        "Apport": "40000",
-        "Revenu net": "2500",
-        "Durée": "20",
-        "Taux d'intérêt": "3.5",
-        "Assurance prêt": "0.2",
-        "Prix moyen": "2000"
+        "price": "100000",
+        "furn": 10000,
+        "other_fees": "5000",
+        "renovation": "15000",
+        "surface_carrez": "50",
+        "surface_non_validee": "10",
+        "taxe": "1200",
+        "copro": "600",
+        "gestion_pct": "7",
+        "gli": "0",
+        "pno": "0",
+        "compta": "0",
+        "autres": "0",
+        "maintenance_pct": "1",
+        "vacancy_months": "1",
+        "rent": "1000",
+        "apport": "40000",
+        "monthly_income": "2500",
+        "years": "20",
+        "rate": "3.5",
+        "ins_rate": "0.2",
+        "prix_moyen_m2": "2000"
     }
-    # Should not raise
-    m.load_inputs(inputs, "Ancien")
-    # After loading, values should be parsed correctly
+    m = InvestmentModel.from_inputs({**inputs, "type_of_property": "Neuf"})
     assert m.price == pytest.approx(100000.0)
     assert m.furn == pytest.approx(10000.0)
     assert m.surface_carrez == pytest.approx(50.0)
-    assert m.vacancy_months == pytest.approx(1.0)
-    assert pytest.approx(m.rate) == 0.035
+    assert m.vacancy_months == 1 and isinstance(m.vacancy_months, int)
+    assert m.years == 20 and isinstance(m.years, int)
+    assert m.rate == pytest.approx(0.035)       # saisi en %, stocké en décimal
+    assert m.ins_rate == pytest.approx(0.002)
+    assert m.gestion_pct == pytest.approx(7.0)  # reste en %
+    assert m.type_of_property == "Neuf"
 
-def test_load_inputs_raises_on_invalid_types():
-    m = InvestmentModel()
-    # For keys where the code calls float(value), invalid strings should raise ValueError
-    with pytest.raises(ValueError):
-        m.load_inputs({"Prix d'achat": "not_a_number"}, "Ancien")
-    with pytest.raises(ValueError):
-        m.load_inputs({"Loyer": "one thousand"}, "Ancien")
-    with pytest.raises(ValueError):
-        m.load_inputs({"Durée": "twenty"}, "Ancien")
+@pytest.mark.parametrize("inputs,message", [
+    ({"price": "not_a_number"}, "Prix d'achat"),
+    ({"rent": "one thousand"}, "Loyer mensuel"),
+    ({"years": "twenty"}, "Durée du prêt"),
+    ({"years": 12.5}, "nombre entier"),
+    ({"vacancy_months": 1.5}, "nombre entier"),
+    ({"loyer": 800}, "Champs inconnus"),  # clé inconnue : plus de correspondance approximative
+])
+def test_from_inputs_rejects_invalid_inputs(inputs, message):
+    with pytest.raises(ValueError, match=message):
+        InvestmentModel.from_inputs(inputs)
+
+
+def test_compute_does_not_modify_model():
+    m = InvestmentModel(price=100000, rent=800, apport=20000, years=15, rate=0.025,
+                        monthly_income=3000, prix_moyen_m2=2000, surface_carrez=40)
+    before = dict(vars(m))
+    first = m.compute()
+    assert vars(m) == before
+    second = m.compute()
+    assert first["monthly_cashflow"] == second["monthly_cashflow"]
+
 
 def test_computations_against_manual_calculation():
     # Build a realistic sample project (numbers chosen for easy verification)
-    m = InvestmentModel()
     inputs = {
-        "Prix d'achat": 200000,
-        "Meubles": 10000,
-        "Autres frais": 5000,
-        "Rénovation": 15000,
-        "Surface Carrez": 60,
-        "Surface non prise en compte": 10,
-        "Taxe foncière": 1200,
-        "Charges copro": 600,
-        "Gestion": 7,            # percent
-        "GLI": 0,
-        "Assurance PNO": 0,
-        "Frais compta": 0,
-        "Autres charges": 0,
-        "Maintenance": 1,        # percent of price per year
-        "Vacance locative": 1,   # months per year
-        "Loyer": 1200,           # monthly
-        "Apport": 40000,
-        "Revenu net": 3000,
-        "Durée": 20,
-        "Taux d'intérêt": 3.5,
-        "Assurance prêt": 0.2,
-        "Prix moyen": 2500
+        "price": 200000,
+        "furn": 10000,
+        "other_fees": 5000,
+        "renovation": 15000,
+        "surface_carrez": 60,
+        "surface_non_validee": 10,
+        "taxe": 1200,
+        "copro": 600,
+        "gestion_pct": 7,            # percent
+        "gli": 0,
+        "pno": 0,
+        "compta": 0,
+        "autres": 0,
+        "maintenance_pct": 1,        # percent of price per year
+        "vacancy_months": 1,   # months per year
+        "rent": 1200,           # monthly
+        "apport": 40000,
+        "monthly_income": 3000,
+        "years": 20,
+        "rate": 3.5,
+        "ins_rate": 0.2,
+        "prix_moyen_m2": 2500
     }
-    m.load_inputs(inputs, "Ancien")
-    results = m.compute(inputs)
+    m = InvestmentModel.from_inputs(inputs)
+    results = m.compute()
 
     # manual calculations following the model formulas
     # total_project = price + notary + furn + other_fees + renovation
@@ -158,17 +171,15 @@ def test_computations_against_manual_calculation():
     assert repaid <= m.loan_amount
 
 def test_compute_returns_expected_keys_and_types():
-    m = InvestmentModel()
     inputs = {
-        "Prix d'achat": 100000,
-        "Loyer": 800,
-        "Apport": 20000,
-        "Durée": 15,
-        "Taux d'intérêt": 2.5,
-        "Assurance prêt": 0.2
+        "price": 100000,
+        "rent": 800,
+        "apport": 20000,
+        "years": 15,
+        "rate": 2.5,
+        "ins_rate": 0.2
     }
-    m.load_inputs(inputs, "Ancien")
-    res = m.compute(inputs)
+    res = InvestmentModel.from_inputs(inputs).compute()
     # expected keys
     keys = ["total_project", "notary", "price_carrez", "price_total_pondere",
             "monthly_cashflow", "gross_yield", "net_yield", "ltv",
@@ -185,14 +196,6 @@ def test_compute_returns_expected_keys_and_types():
     assert isinstance(res["monthly_cashflow"], float)
     assert isinstance(res["pie_data"], dict)
 
-def test_safe_parse_float_behaviour():
-    assert safe_parse_float("123,45") == pytest.approx(123.45)
-    assert safe_parse_float("   1 234  ") == pytest.approx(1234.0)
-    assert safe_parse_float("") == pytest.approx(0.0)
-    assert safe_parse_float(None) == pytest.approx(0.0)
-    assert safe_parse_float("notnum") == pytest.approx(0.0)
-
-
 def test_model_does_not_import_ui_libraries():
     import subprocess
     import sys
@@ -200,3 +203,8 @@ def test_model_does_not_import_ui_libraries():
             "bad = [m for m in ('customtkinter', 'tkinter', 'matplotlib') if m in sys.modules]; "
             "assert not bad, bad")
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_fake_view_fields_match_model_fields():
+    from tests.conftest import VIEW_DEFAULT_INPUTS
+    assert set(VIEW_DEFAULT_INPUTS) == set(InvestmentModel.FIELD_LABELS)

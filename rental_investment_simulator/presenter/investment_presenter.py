@@ -4,7 +4,7 @@ from typing import Dict, Any, Tuple
 
 import matplotlib.pyplot as plt
 
-from model.investment_model import InvestmentModel, safe_parse_float
+from model.investment_model import InvestmentModel
 from view.investment_view import InvestmentView
 
 
@@ -52,8 +52,9 @@ class InvestmentPresenter:
         """Triggered when the user clicks 'Calculer'."""
         try:
             inputs = self.view.get_all_inputs()
-            inputs["Type de bien"] = self.view.get_property_type()
-            results = self.model.compute(inputs)
+            inputs["type_of_property"] = self.view.get_property_type()
+            self.model = InvestmentModel.from_inputs(inputs)
+            results = self.model.compute()
             
             # update recommendation
             self.view.update_recommendation(results["rec_text"], results["rec_color"])
@@ -62,7 +63,7 @@ class InvestmentPresenter:
 
             # update indicators (keeps same label keys as created)
             self.view.update_indicator("Cashflow (€ / mois):", f"{results['monthly_cashflow']:,.2f}€",
-                                       color=self._color_cashflow(results['monthly_cashflow'], results['monthly_payment'], safe_parse_float(inputs.get("Revenu net mensuel (€)", 0.0))))
+                                       color=self._color_cashflow(results['monthly_cashflow'], results['monthly_payment'], self.model.monthly_income))
             self.view.update_indicator("Rendement brut (%):", f"{results['gross_yield']:.2f}%",
                                        color=color_gradient(results['gross_yield'], (5, 8, 15)))
             self.view.update_indicator("Rendement net (%):", f"{results['net_yield']:.2f}%",
@@ -91,7 +92,7 @@ class InvestmentPresenter:
                                        color=color_gradient(results['ratio_marche'], (95, 105, 120), ("green", "orange", "red")))
             
             # Générer le rapport (et les graphiques PNG) maintenant que tout est calculé
-            self.generate_investment_report()
+            self.generate_investment_report(results)
 
             # --- Simulation amortissement avec prépaiement ---
             simu = self.model.simulate_amortization(int(self.model.years))
@@ -217,37 +218,13 @@ class InvestmentPresenter:
     
         return txt
 
-    def generate_investment_report(self, filename: str = "rapport_investissement.txt") -> str:
+    def generate_investment_report(self, results: Dict[str, Any],
+                                   filename: str = "rapport_investissement.txt") -> str:
         """
         Génère un fichier texte détaillé avec les résultats de la simulation.
+        `results` est le dictionnaire renvoyé par self.model.compute().
         Structure optimisée pour présenter le projet à une banque.
         """
-        results = self.model.compute({
-            "Type de bien": self.model.type_of_property,
-            "Prix d'achat": self.model.price,
-            "Meubles": self.model.furn,
-            "Autres frais": self.model.other_fees,
-            "Rénovation": self.model.renovation,
-            "Surface Carrez": self.model.surface_carrez,
-            "Surface non prise en compte": self.model.surface_non_validee,
-            "Taxe foncière": self.model.taxe,
-            "Charges copro": self.model.copro,
-            "Gestion en agence": self.model.gestion_pct,
-            "GLI": self.model.gli,
-            "Assurance PNO": self.model.pno,
-            "Frais compta": self.model.compta,
-            "Autres charges": self.model.autres,
-            "Maintenance": self.model.maintenance_pct,
-            "Vacance locative": self.model.vacancy_months,
-            "Loyer": self.model.rent,
-            "Apport": self.model.apport,
-            "Revenu net mensuel": self.model.monthly_income,
-            "Durée": self.model.years,
-            "Taux d'intérêt": self.model.rate * 100,
-            "Assurance prêt": self.model.ins_rate * 100,
-            "Prix moyen": self.model.prix_moyen_m2
-        })
-    
         self.fixed_charges = {
             "Taxe foncière": self.model.taxe / 12,
             "Charges copro": self.model.copro / 12,

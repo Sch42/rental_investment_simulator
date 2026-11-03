@@ -5,7 +5,7 @@ from presenter.investment_presenter import InvestmentPresenter
 
 def test_credit_cost_excludes_principal(view_inputs):
     from model.investment_model import InvestmentModel
-    res = InvestmentModel().compute(view_inputs)
+    res = InvestmentModel.from_inputs(view_inputs).compute()
     assert res["credit_cost"] == pytest.approx(res["total_loan_cost"] - res["loan_amount"])
     assert 0 < res["credit_cost"] < res["loan_amount"]
 
@@ -26,7 +26,7 @@ def test_debt_ratio_color_matches_scoring(make_presenter, monkeypatch, income, e
     colors = {}
     monkeypatch.setattr(view, "update_indicator",
                         lambda label, value, color=None: colors.__setitem__(label, color))
-    view.inputs["Revenu net mensuel (€)"] = float(income)
+    view.inputs["monthly_income"] = float(income)
     view.calculate()
     assert colors["Taux d’endettement (%):"] == expected_color
 

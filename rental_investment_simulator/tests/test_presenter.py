@@ -17,8 +17,8 @@ def test_property_type_ancien_is_used(make_presenter):
 def test_saved_payback_chart_uses_computed_cashflow(make_presenter, monkeypatch):
     import matplotlib.axes
     presenter, view = make_presenter(inputs=None)
-    view.inputs["Apport (€)"] = 0.0
-    view.inputs["Loyer mensuel (€)"] = 900.0  # cashflow positif → payback atteint
+    view.inputs["apport"] = 0.0
+    view.inputs["rent"] = 900.0  # cashflow positif → payback atteint
 
     bars = {}
     orig_bar = matplotlib.axes.Axes.bar
@@ -42,7 +42,7 @@ def _report_conclusion(path):
 
 def test_report_conclusion_for_risky_project(make_presenter, tmp_path):
     presenter, view = make_presenter()
-    view.inputs["Loyer mensuel (€)"] = 300.0
+    view.inputs["rent"] = 300.0
     view.calculate()
     assert view.recommendation[1] == "red"
     conclusion = _report_conclusion(tmp_path / "rapport_investissement.txt")
@@ -53,8 +53,8 @@ def test_report_conclusion_for_risky_project(make_presenter, tmp_path):
 
 def test_report_conclusion_for_good_project(make_presenter, tmp_path):
     presenter, view = make_presenter()
-    view.inputs.update({"Loyer mensuel (€)": 1000.0, "Prix moyen au m² (€ / m²)": 5000.0,
-                        "Apport (€)": 30000.0})
+    view.inputs.update({"rent": 1000.0, "prix_moyen_m2": 5000.0,
+                        "apport": 30000.0})
     view.calculate()
     assert view.recommendation[1] == "green"
     conclusion = _report_conclusion(tmp_path / "rapport_investissement.txt")
