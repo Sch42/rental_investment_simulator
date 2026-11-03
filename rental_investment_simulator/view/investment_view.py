@@ -64,6 +64,7 @@ class InvestmentView(ctk.CTk):
         self.current_values: Dict[str, float] = {}
         self.center_text = None
         self.explode_arr: List[float] = []
+        self._hover_index: Optional[int] = None
 
         self._create_ui()
 
@@ -375,6 +376,7 @@ class InvestmentView(ctk.CTk):
         self.ax.legend(labels, loc="center left", bbox_to_anchor=(1, 0.5))
         # center text
         self.center_text = self.ax.text(0, 0, "", ha="center", va="center", fontsize=12, fontweight='bold')
+        self._hover_index = None
         self.canvas.draw()
 
     def set_pie_hover_handler(self, handler):
@@ -393,8 +395,9 @@ class InvestmentView(ctk.CTk):
         Update pie display when a wedge is hovered or not.
         If selected_index is None -> reset.
         """
-        if not self.pie_wedges:
-            return
+        if not self.pie_wedges or selected_index == self._hover_index:
+            return  # rien à redessiner : évite un redraw complet à chaque mouvement de souris
+        self._hover_index = selected_index
         values = list(self.current_values.values())
         labels = list(self.current_values.keys())
 
