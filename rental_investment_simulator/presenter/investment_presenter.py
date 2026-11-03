@@ -1,9 +1,34 @@
-from typing import Dict, Any
-from model.investment_model import InvestmentModel, safe_parse_float, color_gradient, VALORISATION_NON_CARREZ
-from view.investment_view import InvestmentView
-import matplotlib.pyplot as plt
 import math
 import os
+from typing import Dict, Any, Tuple
+
+import matplotlib.pyplot as plt
+
+from model.investment_model import InvestmentModel, safe_parse_float
+from view.investment_view import InvestmentView
+
+
+def color_gradient(value: float,
+                   thresholds: Tuple[float, float, float] = (5, 10, 20),
+                   colors: Tuple[str, str, str] = ("red", "orange", "green")) -> str:
+    """
+    Retourne une couleur en fonction d'une valeur numérique et de seuils.
+
+    Args:
+        value (float): La valeur numérique à évaluer.
+        thresholds (tuple): Seuils (bas, moyen, haut).
+        colors (tuple): Couleurs correspondantes.
+
+    Returns:
+        str: Couleur choisie.
+    """
+    low, medium, high = thresholds
+    if value < low:
+        return colors[0]
+    if value < medium:
+        return colors[1]
+    return colors[2]
+
 # -----------------------
 # Presenter
 # -----------------------
@@ -135,34 +160,6 @@ class InvestmentPresenter:
             self.view.show_info_modal("Détails de la recommandation", "Pas de détails disponibles.")
 
     # ---- Explanations (copied / adapted from original) ----
-    @staticmethod
-    def _recommendation_explanation(summary: Dict[str, Any]) -> str:
-        txt = (
-            "Recommandations détaillées :\n\n"
-            "Vert : indicateur bon, projet confortable.\n"
-            "Orange : marge de sécurité réduite.\n"
-            "Rouge : projet risqué.\n\n"
-        )
-        if summary:
-            txt += "--- Résumé du projet ---\n"
-            txt += f"Cashflow : {summary.get('cashflow', 0):.0f} €/mois\n"
-            txt += f"Taux de couverture : {summary.get('taux_couv', 0):.1f} %\n"
-            txt += f"LTV : {summary.get('ltv', 0):.1f} %\n"
-            txt += f"Taux d’endettement : {summary.get('debt_ratio', 0):.1f} %\n"
-            txt += f"Ratio marché : {summary.get('ratio_marche', 0):.1f} %\n\n"
-        txt += (
-            "--- Interprétation ---\n"
-            "- Cashflow ≥0 : projet s’autofinance.\n"
-            "- Taux de couverture ≤70 % : bon équilibre loyer/crédit.\n"
-            "- Loyer seuil de rentabilité ≤80 % : ratio prêt/valeur sûr.\n"
-            "- Endettement ≤30 % : soutenable.\n\n"
-            "- Ratio marché <100 % : bien sous le prix du marché.\n"
-            "Conseils :\n"
-            "- En cas de Rouge : augmenter l’apport, négocier le prix ou rehausser le loyer.\n"
-            "- En cas de Orange : vérifier charges et prévoir une marge de sécurité."
-        )
-        return txt
-    
     def _recommendation_explanation(self, summary: Dict[str, Any]) -> str:
         w = self.model.scoring_weights  # pondérations dynamiques
     
@@ -521,18 +518,3 @@ class InvestmentPresenter:
             ax2.legend()
         plt.savefig(payback_filename, bbox_inches='tight')
         plt.close(fig2)
-
-
-
-# -----------------------
-# Run Application
-# -----------------------
-def main() -> None:
-    model = InvestmentModel()
-    view = InvestmentView()
-    presenter = InvestmentPresenter(model, view)
-    view.mainloop()
-
-
-if __name__ == "__main__":
-    main()
