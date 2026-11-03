@@ -380,7 +380,8 @@ class InvestmentPresenter:
                 "N’oubliez pas de prévoir une marge de sécurité pour les imprévus."
             ),
             "Prix final au m² (€ / m²):": (
-                "Le prix final au m² permet de comparer le coût du bien avec le marché.\n"
+                "Le prix final au m² est le coût de revient au m² : il inclut notaire, travaux, meubles et autres frais.\n"
+                "Pour comparer au prix du marché, utilisez plutôt le Ratio marché (basé sur le prix d'achat seul).\n"
                 "Formules :\nPrix final au m² = Prix total projet / Surface Carrez\n"
                 "Prix m² pondéré (entre parenthèses) = Prix total projet / Surface pondérée\n\n"
                 "La surface pondérée inclut la surface Carrez + 30% des surfaces non Carrez.\n\n"
@@ -407,7 +408,9 @@ class InvestmentPresenter:
                 "elles peuvent fortement impacter la rentabilité."
             ),
             "Ratio marché (%):": (
-                "Ratio marché = Prix au m² pondéré / Prix moyen au m² du marché × 100\n\n"
+                "Ratio marché = (Prix d'achat / Surface pondérée) / Prix moyen au m² du marché × 100\n\n"
+                "Seul le prix d'achat est pris en compte : les prix moyens du marché n'incluent ni frais de notaire, "
+                "ni travaux, ni meubles.\n\n"
                 "💡 Un ratio <100% signifie que vous achetez sous le prix du marché (bon point). "
                 "Un ratio >120% peut indiquer un bien trop cher ou une erreur dans l’évaluation."
             ),

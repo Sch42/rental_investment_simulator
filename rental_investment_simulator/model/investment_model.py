@@ -213,8 +213,14 @@ class InvestmentModel:
 
     @property
     def ratio_marche(self) -> float:
-        """Ratio du prix au m² pondéré comparé au marché (%)."""
-        return (self.price_total_pondere / self.prix_moyen_m2 * 100) if self.prix_moyen_m2 > 0 else 0.0
+        """Prix d'achat au m² pondéré comparé au prix moyen du marché (%).
+
+        Calculé sur le prix d'achat seul : les prix de marché (DVF, notaires…) n'incluent
+        ni frais de notaire, ni travaux, ni meubles.
+        """
+        if self.prix_moyen_m2 <= 0 or self.surface_totale_ponderee <= 0:
+            return 0.0
+        return self.price / self.surface_totale_ponderee / self.prix_moyen_m2 * 100
 
     @property
     def loan_amount(self) -> float:

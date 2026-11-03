@@ -306,7 +306,8 @@ class TestInvestmentModel(unittest.TestCase):
         self.assertAlmostEqual(self.model.price_total_pondere, expected, places=2)
 
     def test_ratio_marche(self):
-        expected = self.model.price_total_pondere / 2200 * 100
+        # Prix d'achat seul (hors notaire et travaux) au m² pondéré
+        expected = 69000 / self.model.surface_totale_ponderee / 2200 * 100
         self.assertAlmostEqual(self.model.ratio_marche, expected, places=2)
 
     def test_loan_amount(self):
