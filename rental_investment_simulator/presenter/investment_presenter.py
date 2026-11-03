@@ -79,7 +79,7 @@ class InvestmentPresenter:
             # pie chart and payback
             pie_file = "charges_pie.png"
             payback_file = "payback_period.png"
-            self.save_charts(pie_file, payback_file)
+            self.save_charts(results, pie_file, payback_file)
             self.view.draw_pie(results['pie_data'])
             self.view.draw_payback(results['cumulative_cashflow'], int(self.model.years), results['payback_year'])
 
@@ -334,7 +334,7 @@ class InvestmentPresenter:
                         # --- Ajouter les graphiques ---
             pie_file = "charges_pie.png"
             payback_file = "payback_period.png"
-            self.save_charts(pie_file, payback_file)
+            self.save_charts(results, pie_file, payback_file)
             
             f.write("=== 📊 Graphiques visuels ===\n")
             f.write(f"- Répartition des charges : voir {pie_file}\n")
@@ -448,9 +448,11 @@ class InvestmentPresenter:
 
     
 
-    def save_charts(self, pie_filename="charges_pie.png", payback_filename="payback_period.png"):
+    def save_charts(self, results: Dict[str, Any], pie_filename="charges_pie.png",
+                    payback_filename="payback_period.png"):
         """
         Save pie chart of charges and payback period chart.
+        `results` est le dictionnaire renvoyé par InvestmentModel.compute().
         Handles empty or zero data gracefully.
         """
         # --- Pie chart charges ---
@@ -476,13 +478,9 @@ class InvestmentPresenter:
         plt.close(fig)
     
         # --- Payback period ---
-        cumulative_cashflow = getattr(self.model, 'cumulative_cashflow', [])
-        years = int(getattr(self.model, 'years', 1))
-        payback_year = getattr(self.model, 'payback_year', None)
-    
-        if not cumulative_cashflow or all(cf == 0 for cf in cumulative_cashflow):
-            # Handle empty or all-zero cashflow
-            cumulative_cashflow = [0] * years
+        cumulative_cashflow = list(results.get('cumulative_cashflow') or [0])
+        payback_year = results.get('payback_year')
+        years = len(cumulative_cashflow)
     
         x = list(range(1, years + 1))
         colors = ['green' if cf >= 0 else 'red' for cf in cumulative_cashflow]
