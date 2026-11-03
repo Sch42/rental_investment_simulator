@@ -263,14 +263,15 @@ class InvestmentPresenter:
             "Assurance PNO": self.model.pno / 12,
             "Frais compta": self.model.compta / 12,
             "Autres charges": self.model.autres / 12,
+            "GLI": self.model.gli / 12,
         }
     
         self.variable_charges = {
             "Gestion agence": (self.model.gestion_pct / 100) * self.model.rent * self.model.occupancy_rate,
             "Maintenance": self.model.maintenance / 12,
-            "Vacance locative (impact)": (1 - self.model.occupancy_rate) * self.model.rent,
-            "GLI": self.model.gli / 12,
         }
+        # La vacance n'est pas une charge mais un manque à gagner : affichée à part
+        vacancy_loss = (1 - self.model.occupancy_rate) * self.model.rent
     
         with open(filename, "w", encoding="utf-8") as f:
             # === TITRE ===
@@ -304,7 +305,8 @@ class InvestmentPresenter:
             f.write("=== 📈 Charges variables (€/mois) ===\n")
             for k, v in self.variable_charges.items():
                 f.write(f"- {k}: {v:.2f}\n")
-            f.write(f"Total charges variables : {sum(self.variable_charges.values()):.2f} €/mois\n\n")
+            f.write(f"Total charges variables : {sum(self.variable_charges.values()):.2f} €/mois\n")
+            f.write(f"Manque à gagner (vacance locative) : {vacancy_loss:.2f} €/mois\n\n")
     
             # --- Indicateurs financiers ---
             f.write("=== 📊 Indicateurs financiers ===\n")
@@ -456,9 +458,10 @@ class InvestmentPresenter:
         Handles empty or zero data gracefully.
         """
         # --- Pie chart charges ---
-        all_charges = {**getattr(self, 'fixed_charges', {}), **getattr(self, 'variable_charges', {})}
-        labels = list(all_charges.keys())
-        values = list(all_charges.values())
+        # Mêmes données que le camembert affiché à l'écran
+        pie_data = {k: v for k, v in results.get('pie_data', {}).items() if v > 0}
+        labels = list(pie_data.keys())
+        values = list(pie_data.values())
     
         if not values or sum(values) == 0:
             # Handle empty or all-zero charges
@@ -473,7 +476,7 @@ class InvestmentPresenter:
             startangle=90,
             wedgeprops=dict(width=0.4, edgecolor='w')
         )
-        ax.set_title("Répartition des charges mensuelles")
+        ax.set_title("Répartition du loyer : mensualité, charges et cashflow")
         plt.savefig(pie_filename, bbox_inches='tight')
         plt.close(fig)
     
