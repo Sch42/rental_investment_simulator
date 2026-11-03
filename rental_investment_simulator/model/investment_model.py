@@ -478,6 +478,20 @@ class InvestmentModel:
         return self.rent * 12 * self.occupancy_rate
     
     @property
+    def break_even_rent(self) -> float:
+        """Loyer mensuel minimum pour un cashflow nul.
+
+        Résout : R × occupation × (1 - %gestion) - charges hors gestion - mensualité = 0.
+        Retourne +inf si aucun loyer ne peut équilibrer (gestion ≥ 100 % ou vacance de 12 mois).
+        """
+        gestion_m = (self.gestion_pct / 100.0) * (self.rent * self.occupancy_rate)
+        charges_hors_gestion = self.monthly_charges - gestion_m
+        denominator = self.occupancy_rate * (1 - self.gestion_pct / 100.0)
+        if denominator <= 0:
+            return math.inf
+        return (self.monthly_payment + charges_hors_gestion) / denominator
+
+    @property
     def monthly_cashflow(self) -> float:
         """Cashflow mensuel net (loyer effectif - charges - mensualité + apport mensuel)."""
         return (
@@ -802,8 +816,7 @@ class InvestmentModel:
         total_loan_cost = self.monthly_payment * self.n_months
         adjusted_debt_ratio = self.monthly_payment / (self.monthly_income or 1) * 100
     
-        # Break-even rent
-        break_even_rent = (self.monthly_payment + self.monthly_charges) / (1 - self.gestion_pct / 100)
+        break_even_rent = self.break_even_rent
     
         # Pie data
         pie_data = {
