@@ -33,3 +33,30 @@ def test_saved_payback_chart_uses_computed_cashflow(make_presenter, monkeypatch)
     assert payback_year is not None
     assert bars["heights"] == pytest.approx(cumulative)
     assert any(h != 0 for h in bars["heights"])
+
+
+def _report_conclusion(path):
+    text = open(path, encoding="utf-8").read()
+    return text.split("Conclusion pour la banque")[1]
+
+
+def test_report_conclusion_for_risky_project(make_presenter, tmp_path):
+    presenter, view = make_presenter()
+    view.inputs["Loyer mensuel (€)"] = 300.0
+    view.calculate()
+    assert view.recommendation[1] == "red"
+    conclusion = _report_conclusion(tmp_path / "rapport_investissement.txt")
+    assert "sécurisé" not in conclusion
+    assert "risqué" in conclusion
+    assert "Effort d'épargne" in conclusion
+
+
+def test_report_conclusion_for_good_project(make_presenter, tmp_path):
+    presenter, view = make_presenter()
+    view.inputs.update({"Loyer mensuel (€)": 1000.0, "Prix moyen au m² (€ / m²)": 5000.0,
+                        "Apport (€)": 30000.0})
+    view.calculate()
+    assert view.recommendation[1] == "green"
+    conclusion = _report_conclusion(tmp_path / "rapport_investissement.txt")
+    assert "conformes aux standards" in conclusion
+    assert "Cashflow positif" in conclusion
