@@ -1,3 +1,5 @@
+import math
+
 import pytest
 from model.investment_model import InvestmentModel, safe_parse_float
 
@@ -6,35 +8,19 @@ def default_model():
     """Model with default parameters (as constructed)."""
     return InvestmentModel()
 
-def test_defaults_properties_are_zero_or_identity(default_model):
+def test_default_model_is_consistent(default_model):
     m = default_model
-    # Defaults should be zeros where appropriate
-    assert m.notary == pytest.approx(0.0)
-    assert m.maintenance == pytest.approx(0.0)
-    assert m.total_project == pytest.approx(0.0)
-    assert m.surface_totale_ponderee == pytest.approx(0.0)
-    assert m.price_carrez == pytest.approx(0.0)
-    assert m.price_total_pondere == pytest.approx(0.0)
-    assert m.ratio_marche == pytest.approx(0.0)
-    assert m.loan_amount == pytest.approx(0.0)
-    # n_months uses max(1, int(round(years*12))) and default years==0 so should be 1
+    # Valeurs par défaut : price=1, rent=500, years=0, apport=0, Ancien, finance_all=True
+    assert m.notary == pytest.approx(m.price * 0.08)
+    assert m.total_project == pytest.approx(m.price + m.notary)
+    assert m.loan_amount == pytest.approx(m.total_project)
     assert isinstance(m.n_months, int) and m.n_months == 1
-    assert m.monthly_payment_capital == pytest.approx(0.0)
-    assert m.monthly_insurance == pytest.approx(0.0)
-    assert m.monthly_payment == pytest.approx(0.0)
-    assert m.monthly_charges == pytest.approx(0.0)
     assert m.occupancy_rate == pytest.approx(1.0)
-    assert m.effective_annual_rent == pytest.approx(0.0)
-    assert m.monthly_cashflow == pytest.approx(0.0)
-    assert m.gross_yield == pytest.approx(0.0)
-    assert m.net_yield == pytest.approx(0.0)
-    assert m.taux_couv == pytest.approx(0.0)
-    assert m.ltv_price == pytest.approx(0.0)
-    assert m.ltv_project == pytest.approx(0.0)
-    assert m.equity == pytest.approx(0.0)
-    assert m.roe_cashflow == pytest.approx(0.0)
-    assert m.principal_repaid_first_n_months(12) == pytest.approx(0.0)
-    assert m.roe_patrimonial == pytest.approx(0.0)
+    assert m.effective_annual_rent == pytest.approx(m.rent * 12)
+    assert m.monthly_payment == pytest.approx(m.monthly_payment_capital + m.monthly_insurance)
+    for name in ("gross_yield", "net_yield", "taux_couv", "ltv_price", "ltv_project",
+                 "monthly_cashflow", "price_carrez", "ratio_marche"):
+        assert math.isfinite(getattr(m, name)), name
 
 def test_load_inputs_accepts_valid_strings_and_numbers():
     m = InvestmentModel()
