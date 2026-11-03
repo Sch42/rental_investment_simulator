@@ -23,7 +23,6 @@ class InvestmentPresenter:
         # set rec info handler placeholder
         self.rec_details_text = ""
         self.view.set_recommendation_info(self.show_recommendation_details)
-        self.generate_investment_report()
 
     def on_calculate(self) -> None:
         """Triggered when the user clicks 'Calculer'."""
@@ -65,21 +64,13 @@ class InvestmentPresenter:
             self.view.update_indicator("Ratio marché (%):", f"{results['ratio_marche']:.1f}%",
                                        color=color_gradient(results['ratio_marche'], (100, 110, 120), ("green", "orange", "red")))
             
-            # Générer le rapport maintenant que tout est calculé
+            # Générer le rapport (et les graphiques PNG) maintenant que tout est calculé
             self.generate_investment_report()
-            
-            
+
             # --- Simulation amortissement avec prépaiement ---
             simu = self.model.simulate_amortization(int(self.model.years))
             self.view.draw_amortization_chart(simu)
-            
-            
 
-            
-            # pie chart and payback
-            pie_file = "charges_pie.png"
-            payback_file = "payback_period.png"
-            self.save_charts(results, pie_file, payback_file)
             self.view.draw_pie(results['pie_data'])
             self.view.draw_payback(results['cumulative_cashflow'], int(self.model.years), results['payback_year'])
 
