@@ -54,14 +54,16 @@ class InvestmentPresenter:
             self.view.update_indicator("Prix final au m² (€ / m²):", f"{results['price_carrez']:,.0f}€ (prix m² pondéré: {results['price_total_pondere']:,.0f}€)",
                                        color=color_gradient(results['price_carrez'], (2000, 3000, 5000)))
             self.view.update_indicator("Prix total projet (€):", f"{results['total_project']:,.0f}€")
-            self.view.update_indicator("Coût total emprunt / prix (€):", f"{results['total_loan_cost']:,.0f}€ ({results['loan_ratio']:.1f}%)",
+            self.view.update_indicator("Coût total emprunt / prix (€):",
+                                       f"{results['credit_cost']:,.0f}€ d'intérêts et assurance "
+                                       f"(total remboursé : {results['loan_ratio']:.1f}% du projet)",
                                        color=color_gradient(results['loan_ratio'], (130, 150, 200), ("green", "orange", "red")))
             self.view.update_indicator("Frais de notaire (€):", f"{results['notary']:,.0f}€")
             self.view.update_indicator("Charges mensuelles (€):", f"{results['monthly_charges']:,.0f}€")
             self.view.update_indicator("Taux d’endettement (%):", f"{results['adjusted_debt_ratio']:.1f}%",
-                                       color=color_gradient(results['adjusted_debt_ratio'], (30, 35, 50), ("green", "orange", "red")))
+                                       color=color_gradient(results['adjusted_debt_ratio'], (30, 40, 50), ("green", "orange", "red")))
             self.view.update_indicator("Ratio marché (%):", f"{results['ratio_marche']:.1f}%",
-                                       color=color_gradient(results['ratio_marche'], (100, 110, 120), ("green", "orange", "red")))
+                                       color=color_gradient(results['ratio_marche'], (95, 105, 120), ("green", "orange", "red")))
             
             # Générer le rapport (et les graphiques PNG) maintenant que tout est calculé
             self.generate_investment_report()
@@ -91,7 +93,7 @@ class InvestmentPresenter:
         if coverage_ratio < 0.2 or income_ratio < 0.05:
             return "orange"
         if coverage_ratio < 0.5 or income_ratio < 0.1:
-            return "yellow"
+            return "goldenrod"  # "yellow" est illisible sur fond clair
         if coverage_ratio < 1.0 or income_ratio < 0.2:
             return "green"
         return "darkgreen"
@@ -382,7 +384,8 @@ class InvestmentPresenter:
             ),
             "Prix final au m² (€ / m²):": (
                 "Le prix final au m² permet de comparer le coût du bien avec le marché.\n"
-                "Formule :\nPrix final au m² = Prix total projet / Surface pondérée\n\n"
+                "Formules :\nPrix final au m² = Prix total projet / Surface Carrez\n"
+                "Prix m² pondéré (entre parenthèses) = Prix total projet / Surface pondérée\n\n"
                 "La surface pondérée inclut la surface Carrez + 30% des surfaces non Carrez.\n\n"
                 "💡 Attention : certains marchés (ex. Paris) valorisent beaucoup les surfaces non Carrez "
                 "tandis que dans d’autres régions rurales, elles sont peu valorisées."
@@ -431,12 +434,15 @@ class InvestmentPresenter:
                 "💡 C’est l’indicateur préféré des investisseurs car il mesure la rentabilité réelle de l’argent investi."
             ),
             "Coût total emprunt / prix (€):": (
-                "Le coût total de l'emprunt = Mensualité × Nombre de mois\n\n"
-                "💡 Ce montant inclut capital + intérêts + assurance. "
+                "Coût du crédit = Mensualité totale × Nombre de mois - Montant emprunté\n"
+                "Total remboursé / projet = (Mensualité totale × Nombre de mois) / Prix total projet × 100\n\n"
+                "💡 Le coût du crédit correspond aux intérêts + assurance ; le total remboursé inclut aussi le capital. "
                 "Comparer plusieurs durées de prêt permet d’équilibrer mensualité et coût total."
             ),
             "Taux d’endettement (%):": (
-                "Taux d’endettement = (Mensualité totale - Loyer effectif mensuel) / Revenu net mensuel × 100\n\n"
+                "Taux d’endettement = Mensualité totale / Revenu net mensuel × 100\n\n"
+                "⚠️ Calcul simplifié : les loyers perçus ne sont pas pris en compte (les banques en retiennent "
+                "souvent 70 % dans les revenus) et les autres crédits en cours non plus.\n\n"
                 "💡 La banque accepte en général un taux ≤35%. "
                 "Si votre bien a un taux d’endettement élevé, il sera plus difficile d’obtenir un nouveau crédit."
             ),
@@ -446,7 +452,8 @@ class InvestmentPresenter:
                 "💡 Pratique : cela permet d’évaluer rapidement si le loyer du marché est suffisant pour rendre l’opération viable."
             ),
             "Ratio prêt/valeur (%):": (
-                "LTV Prix = Montant du prêt / Prix du bien × 100\n\n"
+                "LTV Projet = Montant du prêt / Prix total projet × 100\n\n"
+                "Le prix total projet inclut notaire, travaux, meubles et autres frais.\n\n"
                 "💡 Les banques préfèrent un LTV ≤90%. "
                 "Au-delà, vous devrez souvent augmenter l’apport."
             ),
