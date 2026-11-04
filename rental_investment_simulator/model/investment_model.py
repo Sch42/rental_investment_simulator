@@ -829,7 +829,7 @@ class InvestmentModel:
             "Taxe foncière": self.taxe/12,
             "Charges copro": self.copro/12,
             "Gestion agence": self.gestion_pct / 100.0 * self.rent * self.occupancy_rate,
-            "GLI": self.gli / 12 * self.occupancy_rate,
+            "GLI": self.gli / 12,
             "Assurance PNO": self.pno/12,
             "Frais compta": self.compta/12,
             "Autres": self.autres/12,
