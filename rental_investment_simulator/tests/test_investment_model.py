@@ -369,8 +369,14 @@ class TestInvestmentModel(unittest.TestCase):
         self.assertAlmostEqual(self.model.ltv_project, expected, places=2)
 
     def test_equity(self):
-        expected = 15000 + 8300 + self.model.notary
-        self.assertAlmostEqual(self.model.equity, expected, places=2)
+        # finance_all=True : le prêt couvre notaire et travaux, seul l'apport est investi
+        self.assertAlmostEqual(self.model.equity, 15000, places=2)
+
+    def test_equity_price_only_financing(self):
+        model = try_model(finance_all=False)
+        expected = 15000 + 8300 + model.notary
+        self.assertAlmostEqual(model.equity, expected, places=2)
+        self.assertAlmostEqual(model.equity + model.loan_amount, model.total_project, places=2)
 
     def test_roe_cashflow(self):
         annual_cf = (self.model.effective_annual_rent

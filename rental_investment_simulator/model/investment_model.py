@@ -532,8 +532,13 @@ class InvestmentModel:
 
     @property
     def equity(self) -> float:
-        """Fonds propres investis (apport + frais + notaire + rénovation + meubles)."""
-        return self.apport + self.renovation + self.furn + self.other_fees + self.notary
+        """Fonds propres réellement investis = coût total du projet - montant emprunté.
+
+        - Financement total (finance_all) : le prêt couvre frais, notaire, travaux et meubles,
+          les fonds propres se limitent donc à l'apport.
+        - Financement du prix seul : l'investisseur paie en plus notaire, frais, travaux et meubles.
+        """
+        return max(0.0, self.total_project - self.loan_amount)
 
     def principal_repaid_first_n_months(self, n=12) -> float:
         """
