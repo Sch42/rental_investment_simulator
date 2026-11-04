@@ -60,3 +60,19 @@ def test_report_conclusion_for_good_project(make_presenter, tmp_path):
     conclusion = _report_conclusion(tmp_path / "rapport_investissement.txt")
     assert "conformes aux standards" in conclusion
     assert "Cashflow positif" in conclusion
+
+
+def test_no_files_written_at_startup(make_presenter, tmp_path):
+    make_presenter()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_calculate_saves_each_chart_once(make_presenter, tmp_path, monkeypatch):
+    import matplotlib.pyplot as plt
+    saved = []
+    orig = plt.savefig
+    monkeypatch.setattr(plt, "savefig", lambda fname, *a, **kw: (saved.append(fname), orig(fname, *a, **kw)))
+    presenter, view = make_presenter()
+    view.calculate()
+    assert sorted(saved) == ["charges_pie.png", "payback_period.png"]
+    assert (tmp_path / "rapport_investissement.txt").exists()
