@@ -93,197 +93,53 @@ class InvestmentModel:
             finance_all (bool, optional): True si financement 100%. Defaults to True.   
 
         """
-        if not isinstance(price, (int, float)):
-            raise TypeError(f"The price must be a number not {type(price)}.")
-        if not isinstance(furn, (int, float)):
-            raise TypeError(f"The furn must be a number not {type(furn)}.")
-        if not isinstance(other_fees, (int, float)):
-            raise TypeError(f"The other_fees must be a number not {type(other_fees)}.")
-        if not isinstance(renovation, (int, float)):
-            raise TypeError(f"The renovation must be a number not {type(renovation)}.")
-        if not isinstance(surface_carrez, (int, float)):
-            raise TypeError(f"The surface_carrez must be a number not {type(surface_carrez)}.")
-        if not isinstance(surface_non_validee, (int, float)):
-            raise TypeError(f"The surface_non_validee must be a number not {type(surface_non_validee)}.")
-        if not isinstance(taxe, (int, float)):
-            raise TypeError(f"The taxe must be a number not {type(taxe)}.")
-        if not isinstance(copro, (int, float)):
-            raise TypeError(f"The copro must be a number not {type(copro)}.")
-        if not isinstance(gestion_pct, (int, float)):
-            raise TypeError(f"The gestion_pct must be a number not {type(gestion_pct)}.")
-        if not isinstance(gli, (int, float)):
-            raise TypeError(f"The gli must be a number not {type(gli)}.")
-        if not isinstance(pno, (int, float)):
-            raise TypeError(f"The pno must be a number not {type(pno)}.")
-        if not isinstance(compta, (int, float)):
-            raise TypeError(f"The compta must be a number not {type(compta)}.")
-        if not isinstance(autres, (int, float)):
-            raise TypeError(f"The autres must be a number not {type(autres)}.")
-        if not isinstance(maintenance_pct, (int, float)):
-            raise TypeError(f"The maintenance_pct must be a number not {type(maintenance_pct)}.")
-        if not isinstance(vacancy_months, int):
-            raise TypeError(f"The vacancy_months must be a integer not {type(vacancy_months)}.")
-        if not isinstance(rent, (int, float)):
-            raise TypeError(f"The rent must be a number not {type(rent)}.")
-        if not isinstance(apport, (int, float)):
-            raise TypeError(f"The apport must be a number not {type(apport)}.")
-        if not isinstance(years, int):
-            raise TypeError(f"The years must be a integer not {type(years)}.")
-        if not isinstance(rate, (int, float)):
-            raise TypeError(f"The rate must be a number not {type(rate)}.")
-        if not isinstance(ins_rate, (int, float)):
-            raise TypeError(f"The ins_rate must be a number not {type(ins_rate)}.")
-        if not isinstance(monthly_income, (int, float)):
-            raise TypeError(f"The monthly_income must be a number not {type(monthly_income)}.")
-        if not isinstance(prix_moyen_m2, (int, float)):
-            raise TypeError(f"The prix_moyen_m2 must be a number not {type(prix_moyen_m2)}.")
+        numbers = {
+            "price": price, "furn": furn, "other_fees": other_fees, "renovation": renovation,
+            "surface_carrez": surface_carrez, "surface_non_validee": surface_non_validee,
+            "taxe": taxe, "copro": copro, "gestion_pct": gestion_pct, "gli": gli, "pno": pno,
+            "compta": compta, "autres": autres, "maintenance_pct": maintenance_pct,
+            "vacancy_months": vacancy_months, "rent": rent, "apport": apport, "years": years,
+            "rate": rate, "ins_rate": ins_rate, "monthly_income": monthly_income,
+            "prix_moyen_m2": prix_moyen_m2,
+        }
+        integer_fields = {"vacancy_months", "years"}
+
+        # --- Types ---
+        for name, value in numbers.items():
+            if name in integer_fields:
+                if not isinstance(value, int):
+                    raise TypeError(f"The {name} must be a integer not {type(value)}.")
+            elif not isinstance(value, (int, float)):
+                raise TypeError(f"The {name} must be a number not {type(value)}.")
         if not isinstance(type_of_property, str):
             raise TypeError(f"The type_of_property must be a str not {type(type_of_property)}.")
         if not isinstance(finance_all, bool):
             raise TypeError(f"The finance_all must be a bool not {type(finance_all)}.")
 
+        # --- Valeurs finies ---
+        for name, value in numbers.items():
+            if math.isinf(value):
+                raise ValueError(f"The {name} cannot be inf.")
+            if math.isnan(value):
+                raise ValueError(f"The {name} cannot be nan.")
 
-        if math.isinf(price):
-            raise ValueError("The price cannot be inf.")
-        elif math.isinf(furn):
-            raise ValueError("The furn cannot be inf.")
-        elif math.isinf(other_fees):
-            raise ValueError("The other_fees cannot be inf.")
-        elif math.isinf(renovation):
-            raise ValueError("The renovation cannot be inf.")
-        elif math.isinf(surface_carrez):
-            raise ValueError("The surface_carrez cannot be inf.")
-        elif math.isinf(surface_non_validee):
-            raise ValueError("The surface_non_validee cannot be inf.")
-        elif math.isinf(taxe):
-            raise ValueError("The taxe cannot be inf.")
-        elif math.isinf(copro):
-            raise ValueError("The copro cannot be inf.")
-        elif math.isinf(gestion_pct):
-            raise ValueError("The gestion_pct cannot be inf.")
-        elif math.isinf(gli):
-            raise ValueError("The gli cannot be inf.")
-        elif math.isinf(pno):
-            raise ValueError("The pno cannot be inf.")
-        elif math.isinf(compta):
-            raise ValueError("The compta cannot be inf.")
-        elif math.isinf(autres):
-            raise ValueError("The autres cannot be inf.")
-        elif math.isinf(maintenance_pct):
-            raise ValueError("The maintenance_pct cannot be inf.")
-        elif math.isinf(vacancy_months):
-            raise ValueError("The vacancy_months cannot be inf.")
-        elif math.isinf(rent):
-            raise ValueError("The rent cannot be inf.")
-        elif math.isinf(apport):
-            raise ValueError("The apport cannot be inf.")
-        elif math.isinf(years):
-            raise ValueError("The years cannot be inf.")
-        elif math.isinf(rate):
-            raise ValueError("The rate cannot be inf.")
-        elif math.isinf(ins_rate):
-            raise ValueError("The ins_rate cannot be inf.")
-        elif math.isinf(monthly_income):
-            raise ValueError("The monthly_income cannot be inf.")
-        elif math.isinf(prix_moyen_m2):
-            raise ValueError("The prix_moyen_m2 cannot be inf.")
-            
-        if math.isnan(price):
-            raise ValueError("The price cannot be nan.")
-        elif math.isnan(furn):
-            raise ValueError("The furn cannot be nan.")
-        elif math.isnan(other_fees):
-            raise ValueError("The other_fees cannot be nan.")
-        elif math.isnan(renovation):
-            raise ValueError("The renovation cannot be nan.")
-        elif math.isnan(surface_carrez):
-            raise ValueError("The surface_carrez cannot be nan.")
-        elif math.isnan(surface_non_validee):
-            raise ValueError("The surface_non_validee cannot be nan.")
-        elif math.isnan(taxe):
-            raise ValueError("The taxe cannot be nan.")
-        elif math.isnan(copro):
-            raise ValueError("The copro cannot be nan.")
-        elif math.isnan(gestion_pct):
-            raise ValueError("The gestion_pct cannot be nan.")
-        elif math.isnan(gli):
-            raise ValueError("The gli cannot be nan.")
-        elif math.isnan(pno):
-            raise ValueError("The pno cannot be nan.")
-        elif math.isnan(compta):
-            raise ValueError("The compta cannot be nan.")
-        elif math.isnan(autres):
-            raise ValueError("The autres cannot be nan.")
-        elif math.isnan(maintenance_pct):
-            raise ValueError("The maintenance_pct cannot be nan.")
-        elif math.isnan(vacancy_months):
-            raise ValueError("The vacancy_months cannot be nan.")
-        elif math.isnan(rent):
-            raise ValueError("The rent cannot be nan.")
-        elif math.isnan(apport):
-            raise ValueError("The apport cannot be nan.")
-        elif math.isnan(years):
-            raise ValueError("The years cannot be nan.")
-        elif math.isnan(rate):
-            raise ValueError("The rate cannot be nan.")
-        elif math.isnan(ins_rate):
-            raise ValueError("The ins_rate cannot be nan.")
-        elif math.isnan(monthly_income):
-            raise ValueError("The monthly_income cannot be nan.")
-        elif math.isnan(prix_moyen_m2):
-            raise ValueError("The prix_moyen_m2 cannot be nan.")
-        # elif math.isnan(type_of_property):
-        #     raise ValueError("The type_of_property cannot be nan.")
-        elif math.isnan(finance_all):
-            raise ValueError("The finance_all cannot be nan.")
-
-        if price <= 0:
-            raise ValueError("The price cannot be <= 0.")
-        elif furn < 0:
-            raise ValueError("Furnishings (furn) cannot be negative.")
-        elif other_fees < 0:
-            raise ValueError("Other fees cannot be negative.")
-        elif renovation < 0:
-            raise ValueError("Renovation costs cannot be negative.")
-        elif surface_carrez <= 0:
-            raise ValueError("Surface Carrez must be > 0.")
-        elif surface_non_validee < 0:
-            raise ValueError("Non-Carrez surface cannot be negative.")
-        elif taxe < 0:
-            raise ValueError("Property tax cannot be negative.")
-        elif copro < 0:
-            raise ValueError("Copropriété charges cannot be negative.")
-        elif gestion_pct < 0:
-            raise ValueError("Gestion percentage cannot be negative.")
-        elif gli < 0:
-            raise ValueError("GLI (insurance) cannot be negative.")
-        elif pno < 0:
-            raise ValueError("PNO (insurance) cannot be negative.")
-        elif compta < 0:
-            raise ValueError("Accounting fees cannot be negative.")
-        elif autres < 0:
-            raise ValueError("Other annual charges cannot be negative.")
-        elif maintenance_pct < 0:
-            raise ValueError("Maintenance percentage cannot be negative.")
-        elif vacancy_months < 0 or vacancy_months > 12:
+        # --- Bornes ---
+        for name in ("price", "surface_carrez", "rent", "monthly_income", "prix_moyen_m2"):
+            if numbers[name] <= 0:
+                raise ValueError(f"The {name} must be > 0.")
+        for name in ("furn", "other_fees", "renovation", "surface_non_validee", "taxe", "copro",
+                     "gestion_pct", "gli", "pno", "compta", "autres", "maintenance_pct",
+                     "apport", "years"):
+            if numbers[name] < 0:
+                raise ValueError(f"The {name} cannot be negative.")
+        if not 0 <= vacancy_months <= 12:
             raise ValueError("Vacancy months must be between 0 and 12.")
-        elif rent <= 0:
-            raise ValueError("Rent must be > 0.")
-        elif apport < 0:
-            raise ValueError("Downpayment (apport) cannot be negative.")
-        elif years < 0:
-            raise ValueError("Loan duration (years) cannot be negative.")
-        elif not 0  <= rate <= 1:
-            raise ValueError("Interest rate cannot be negative or below 1.")
-        elif not 0  <= ins_rate <= 1:
-            raise ValueError("Insurance rate cannot be negative.")
-        elif monthly_income <= 0:
-            raise ValueError("Monthly income must be > 0.")
-        elif prix_moyen_m2 <= 0:
-            raise ValueError("Market average price per m² must be > 0.")
-        elif type_of_property not in ["Ancien", "Neuf"]:
+        for name in ("rate", "ins_rate"):
+            if not 0 <= numbers[name] <= 1:
+                raise ValueError(f"The {name} must be between 0 and 1 (decimal rate).")
+        if type_of_property not in ("Ancien", "Neuf"):
             raise ValueError("Property type must be 'Ancien' or 'Neuf'.")
-        
+
         # --- Affectations ---
         self.price = float(price)
         self.furn = float(furn)
