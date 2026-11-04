@@ -3,6 +3,7 @@ from typing import Dict, Any
 from model.investment_model import InvestmentModel, safe_parse_float, color_gradient, VALORISATION_NON_CARREZ
 from view.investment_view import InvestmentView
 import matplotlib.pyplot as plt
+import math
 import os
 # -----------------------
 # Presenter
@@ -45,7 +46,9 @@ class InvestmentPresenter:
                                        color=color_gradient(results['net_yield'], (3, 5, 10)))
             self.view.update_indicator("Taux de couverture (%):", f"{results['taux_couv']:.2f}%",
                            color=color_gradient(results['taux_couv'], (70, 85, 100), ("red", "orange", "green")))
-            self.view.update_indicator("Loyer seuil de rentabilité (€ / mois):", f"{results['break_even_rent']:,.2f}€")
+            be_rent = results['break_even_rent']
+            self.view.update_indicator("Loyer seuil de rentabilité (€ / mois):",
+                                       f"{be_rent:,.2f}€" if math.isfinite(be_rent) else "Impossible")
             self.view.update_indicator("Ratio prêt/valeur (%):", f"{results['ltv']:.2f}%",
                                        color=color_gradient(results['ltv'], (80, 90, 100), ("green", "orange", "red")))
             self.view.update_indicator("Rendement sur fonds propres (%):", f"{results['roe']:.2f}%",
@@ -423,7 +426,7 @@ class InvestmentPresenter:
             ),
             "Loyer seuil de rentabilité (€ / mois):": (
                 "Le Loyer seuil de rentabilité est le loyer minimum à percevoir pour couvrir toutes les charges et la mensualité du prêt.\n"
-                "Formule :\nLoyer seuil = (Mensualité du prêt + Charges mensuelles) / (1 - % gestion en agence)\n\n"
+                "Formule :\nLoyer seuil = (Mensualité du prêt + Charges hors gestion) / ((1 - % gestion en agence) × Taux d'occupation)\n\n"
                 "💡 Pratique : cela permet d’évaluer rapidement si le loyer du marché est suffisant pour rendre l’opération viable."
             ),
             "Ratio prêt/valeur (%):": (
