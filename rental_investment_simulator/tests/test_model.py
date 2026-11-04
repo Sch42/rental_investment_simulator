@@ -191,3 +191,12 @@ def test_safe_parse_float_behaviour():
     assert safe_parse_float("") == pytest.approx(0.0)
     assert safe_parse_float(None) == pytest.approx(0.0)
     assert safe_parse_float("notnum") == pytest.approx(0.0)
+
+
+def test_model_does_not_import_ui_libraries():
+    import subprocess
+    import sys
+    code = ("import sys; import model.investment_model; "
+            "bad = [m for m in ('customtkinter', 'tkinter', 'matplotlib') if m in sys.modules]; "
+            "assert not bad, bad")
+    subprocess.run([sys.executable, "-c", code], check=True)

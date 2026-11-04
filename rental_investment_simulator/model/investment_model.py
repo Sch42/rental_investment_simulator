@@ -1,26 +1,5 @@
-from typing import Dict, Tuple, Any, List, Optional
+from typing import Dict, Any, List, Optional
 import math
-import customtkinter as ctk
-from tkinter import messagebox
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-
-VALORISATION_NON_CARREZ = 0.3  # pondération surface non valorisée
-
-def parse_float_from_entry(entry_widget) -> float:
-    """
-    Safely parse a float from a CTkEntry-like widget.
-    Returns 0.0 on empty or invalid input.
-    """
-    try:
-        s = entry_widget.get()
-        if s is None or s == "":
-            return 0.0
-        s = str(s).replace(",", ".").replace(" ", "")
-        return float(s)
-    except Exception:
-        return 0.0
 
 
 def safe_parse_float(value: Any) -> float:
@@ -38,27 +17,6 @@ def safe_parse_float(value: Any) -> float:
     except Exception:
         return 0.0
 
-def color_gradient(value: float,
-                   thresholds: Tuple[float, float, float] = (5, 10, 20),
-                   colors: Tuple[str, str, str] = ("red", "orange", "green")) -> str:
-    """
-    Retourne une couleur en fonction d'une valeur numérique et de seuils.
-
-    Args:
-        value (int): La valeur numérique à évaluer.
-        thresholds (tuple): Seuils (bas, moyen, haut).
-        colors (tuple): Couleurs correspondantes.
-
-    Returns:
-        str: Couleur choisie.
-    """
-    low, medium, high = thresholds
-    if value < low:
-        return colors[0]
-    if value < medium:
-        return colors[1]
-    return colors[2]
-
 class InvestmentModel:
     """
     Modèle financier d'un projet d'investissement immobilier.
@@ -67,31 +25,15 @@ class InvestmentModel:
     permettant de calculer rentabilité, cashflow, taux de couverture, etc.
     Elle ne dépend pas de la vue (UI) ni du presenter.
 
-    Exemple concret:
-        >>> model = InvestmentModel(
-        ...     "Prix d'achat": 200000,
-        ...     "Meubles": 10000,
-        ...     "Rénovation": 20000,
-        ...     "Surface Carrez": 50,
-        ...     "Surface non Carrez": 10,
-        ...     "Taxe foncière": 1200,
-        ...     "Charges copro": 600,
-        ...     "Gestion": 7,
-        ...     "Loyer": 1000,
-        ...     "Apport": 40000,
-        ...     "Durée": 20,
-        ...     "Taux d'intérêt": 1.5,
-        ...     "Assurance prêt": 0.3,
-        ...     "Prix moyen": 4500
-        ... )
-        >>> model.load_inputs(inputs, type_of_property="Ancien")
-        >>> round(model.gross_yield, 2)
-        5.23
-        >>> round(model.monthly_cashflow, 2)
-        234.56
+    Exemple:
+        >>> model = InvestmentModel(price=200000, renovation=20000, surface_carrez=50,
+        ...                         rent=1000, apport=40000, years=20, rate=0.035,
+        ...                         monthly_income=3000, prix_moyen_m2=4500)
+        >>> round(model.total_project)
+        236000
     """
 
-    VALORISATION_NON_CARREZ = 0.3
+    VALORISATION_NON_CARREZ = 0.3  # pondération des surfaces hors Carrez
 
     def __init__(
         self,
@@ -892,18 +834,15 @@ class InvestmentModel:
         total = -self.equity
         payback_year: Optional[int] = None
         years_int = int(self.years) if self.years >= 1 else 1
-        
+        annual_cf = self.monthly_cashflow * 12
         for y in range(1, years_int + 1):
-            annual_cf = (self.monthly_cashflow) * 12
             total += annual_cf
             cumulative_cashflow.append(total)
             if total >= 0 and payback_year is None:
                 payback_year = y
-
-        payback_year = next((i + 1 for i, val in enumerate(cumulative_cashflow) if val >= 0), None)
     
+        # === Recommandation factorisée ===
         rec_text, rec_color, rec_details_text, proposed_price = self._evaluate_investment(adjusted_debt_ratio)
-        
     
         # === Résultats finaux ===
         return {
