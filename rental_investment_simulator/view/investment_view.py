@@ -39,7 +39,8 @@ class InvestmentView(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         # UI storage
-        self.entries: Dict[str, ctk.CTkEntry] = {}
+        self.entries: Dict[str, ctk.CTkEntry] = {}       # clé = nom d'attribut du modèle
+        self.entry_labels: Dict[str, str] = {}           # clé = nom d'attribut du modèle
         self.indicators: Dict[str, ctk.CTkLabel] = {}
         self.type_menu: Optional[ctk.CTkOptionMenu] = None
         self.rec_label: Optional[ctk.CTkLabel] = None
@@ -87,40 +88,40 @@ class InvestmentView(ctk.CTk):
 
         # Sections & inputs
         self._add_section(left, "Infos d'achat", [
-            ("Prix d'achat (€):", "69000"),
-            ("Prix moyen au m² (€ / m²):", "2200"),
-            ("Meubles / électroménager (€):", "0"),
-            ("Autres frais (€):", "0"),
-            ("Rénovation / travaux (€):", "8300"),
-            ("Surface Carrez (m²):", "18.38"),
-            ("Surface non prise en compte (m²):", "7.48"),
+            ("price", "Prix d'achat (€):", "69000"),
+            ("prix_moyen_m2", "Prix moyen au m² (€ / m²):", "2200"),
+            ("furn", "Meubles / électroménager (€):", "0"),
+            ("other_fees", "Autres frais (€):", "0"),
+            ("renovation", "Rénovation / travaux (€):", "8300"),
+            ("surface_carrez", "Surface Carrez (m²):", "18.38"),
+            ("surface_non_validee", "Surface non prise en compte (m²):", "7.48"),
         ])
 
         self._add_section(left, "Charges fixes", [
-            ("Taxe foncière (€ / an):", "300"),
-            ("Charges copropriété (€ / an):", "360"),
-            ("GLI (€ / an):", "0"),
-            ("Assurance PNO (€ / an):", "0"),
-            ("Frais compta (€ / an):", "0"),
-            ("Autres charges (€ / an):", "360"),
+            ("taxe", "Taxe foncière (€ / an):", "300"),
+            ("copro", "Charges copropriété (€ / an):", "360"),
+            ("gli", "GLI (€ / an):", "0"),
+            ("pno", "Assurance PNO (€ / an):", "0"),
+            ("compta", "Frais compta (€ / an):", "0"),
+            ("autres", "Autres charges (€ / an):", "360"),
         ])
 
         self._add_section(left, "Charges variables", [
-            ("Gestion en agence (% du loyer):", "0"),
-            ("Maintenance / réparations (% du prix / an):", "2"),
-            ("Vacance locative (mois/an):", "0"),
+            ("gestion_pct", "Gestion en agence (% du loyer):", "0"),
+            ("maintenance_pct", "Maintenance / réparations (% du prix / an):", "2"),
+            ("vacancy_months", "Vacance locative (mois/an):", "0"),
         ])
 
         self._add_section(left, "Revenus locatifs", [
-            ("Loyer mensuel (€):", "500"),
+            ("rent", "Loyer mensuel (€):", "500"),
         ])
 
         self._add_section(left, "Financement", [
-            ("Apport (€):", "15000"),
-            ("Revenu net mensuel (€):", "2000"),
-            ("Durée du prêt (années):", "25"),
-            ("Taux d'intérêt annuel (%):", "3.5"),
-            ("Assurance prêt (%):", "0.2"),
+            ("apport", "Apport (€):", "15000"),
+            ("monthly_income", "Revenu net mensuel (€):", "2000"),
+            ("years", "Durée du prêt (années):", "25"),
+            ("rate", "Taux d'intérêt annuel (%):", "3.5"),
+            ("ins_rate", "Assurance prêt (%):", "0.2"),
         ])
         
         # Champ pour l’épargne mensuelle
@@ -244,10 +245,10 @@ class InvestmentView(ctk.CTk):
         self._calculate_button = calc_btn
 
 
-    def _add_section(self, parent, title: str, fields: List[Tuple[str, str]]) -> None:
-        """Small helper to create labeled input fields."""
+    def _add_section(self, parent, title: str, fields: List[Tuple[str, str, str]]) -> None:
+        """Crée les champs d'une section. Chaque champ : (attribut du modèle, libellé, valeur par défaut)."""
         ctk.CTkLabel(parent, text=title, anchor="w", font=("Helvetica", 12, "bold")).pack(fill="x", padx=8, pady=(8, 2))
-        for label_text, default in fields:
+        for field_name, label_text, default in fields:
             frame = ctk.CTkFrame(parent)
             frame.pack(fill="x", padx=6, pady=2)
             lbl = ctk.CTkLabel(frame, text=label_text, anchor="w")
@@ -255,31 +256,29 @@ class InvestmentView(ctk.CTk):
             entry = ctk.CTkEntry(frame, width=120)
             entry.insert(0, default)
             entry.pack(side="right", padx=(6, 4))
-            # Normalize the key to match the model expected keys
-            key = label_text.replace(":", "")
-            self.entries[key] = entry
+            self.entries[field_name] = entry
+            self.entry_labels[field_name] = label_text.rstrip(":")
 
     
     def get_all_inputs(self) -> Dict[str, float]:
         """
-        Return a mapping of expected keys to numeric values parsed from entries.
-        Keys match the model expectations.
+        Retourne {nom d'attribut du modèle: valeur saisie}, prêt pour InvestmentModel.from_inputs.
+        Lève ValueError en listant les champs non numériques.
         """
         parsed = {}
         errors = []
-        for key, entry in self.entries.items():
-            normalized = key.replace(":", "")
+        for field_name, entry in self.entries.items():
             try:
-                parsed[normalized] = parse_float_from_entry(entry)
+                parsed[field_name] = parse_float_from_entry(entry)
             except ValueError as exc:
-                errors.append(f"{normalized} : {exc}")
+                errors.append(f"{self.entry_labels[field_name]} : {exc}")
 
         # Champs additionnels
         try:
-            parsed["Épargne mensuelle"] = parse_float_from_entry(self.extra_entry)
+            parsed["extra_monthly_contrib"] = parse_float_from_entry(self.extra_entry)
         except ValueError as exc:
             errors.append(f"Épargne mensuelle : {exc}")
-        parsed["DPE"] = self.dpe_combo.get()
+        parsed["dpe"] = self.dpe_combo.get()
 
         if errors:
             raise ValueError("\n".join(errors))

@@ -26,6 +26,6 @@ def test_break_even_rent_impossible(kw):
 
 
 def test_compute_does_not_crash_with_full_management_fee(view_inputs):
-    view_inputs["Gestion en agence (% du loyer)"] = 100
-    res = InvestmentModel().compute(view_inputs)
+    view_inputs["gestion_pct"] = 100
+    res = InvestmentModel.from_inputs(view_inputs).compute()
     assert res["break_even_rent"] == math.inf

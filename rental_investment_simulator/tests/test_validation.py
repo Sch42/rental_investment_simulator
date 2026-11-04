@@ -21,22 +21,22 @@ def test_parse_invalid_entries_raise(raw):
 
 
 @pytest.mark.parametrize("field,value,message", [
-    ("Loyer mensuel (€)", 0, "Loyer mensuel"),
-    ("Vacance locative (mois/an)", 15, "Vacance locative"),
-    ("Taux d'intérêt annuel (%)", -1, "Taux d'intérêt"),
-    ("Durée du prêt (années)", 0, "Durée du prêt"),
-    ("Gestion en agence (% du loyer)", 120, "Gestion en agence"),
-    ("Apport (€)", -5, "Apport"),
+    ("rent", 0, "Loyer mensuel"),
+    ("vacancy_months", 15, "Vacance locative"),
+    ("rate", -1, "Taux d'intérêt"),
+    ("years", 0, "Durée du prêt"),
+    ("gestion_pct", 120, "Gestion en agence"),
+    ("apport", -5, "Apport"),
 ])
 def test_compute_rejects_invalid_values(view_inputs, field, value, message):
     view_inputs[field] = value
     with pytest.raises(ValueError, match=message):
-        InvestmentModel().compute(view_inputs)
+        InvestmentModel.from_inputs(view_inputs).compute()
 
 
 def test_presenter_reports_invalid_input(make_presenter):
     presenter, view = make_presenter()
-    view.inputs["Loyer mensuel (€)"] = 0
+    view.inputs["rent"] = 0
     view.calculate()
     assert view.errors and "Loyer mensuel" in view.errors[0]
     assert view.recommendation is None
