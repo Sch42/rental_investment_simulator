@@ -1,12 +1,8 @@
 import unittest
 import math
-import sys
-from pathlib import Path
 from hypothesis import given, strategies as st
 
-# add model path
-sys.path.append(str(Path.cwd().parent) + "\\model")
-from investment_model import InvestmentModel
+from model.investment_model import InvestmentModel
 
 
 # -------- Helper --------
