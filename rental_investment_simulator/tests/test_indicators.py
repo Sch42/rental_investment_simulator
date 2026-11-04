@@ -29,3 +29,12 @@ def test_debt_ratio_color_matches_scoring(make_presenter, monkeypatch, income, e
     view.inputs["Revenu net mensuel (€)"] = float(income)
     view.calculate()
     assert colors["Taux d’endettement (%):"] == expected_color
+
+
+def test_ratio_marche_uses_purchase_price_only():
+    from model.investment_model import InvestmentModel
+    base = dict(price=100000, surface_carrez=50, prix_moyen_m2=2000, rent=500)
+    m = InvestmentModel(**base)
+    assert m.ratio_marche == pytest.approx(100.0)
+    # Travaux, meubles et frais ne changent pas le ratio marché
+    assert InvestmentModel(**base, renovation=20000, furn=5000, other_fees=3000).ratio_marche == pytest.approx(100.0)

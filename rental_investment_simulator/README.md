@@ -42,4 +42,4 @@ pytest
 - Frais de notaire forfaitaires : 8 % (ancien) / 2,5 % (neuf).
 - Surfaces hors Carrez valorisées à 30 %.
 - Taux d'endettement simplifié : mensualité / revenu net (sans les loyers ni les autres crédits).
-- Le ratio marché compare le coût total du projet au m² (notaire et travaux inclus) au prix moyen du marché.
+- Le ratio marché compare le prix d'achat au m² pondéré (hors notaire, travaux et meubles) au prix moyen du marché.
