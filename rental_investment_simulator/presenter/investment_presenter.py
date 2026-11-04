@@ -330,9 +330,9 @@ class InvestmentPresenter:
     
             # --- Conclusion pour la banque ---
             f.write("=== ✅ Conclusion pour la banque ===\n")
-            f.write("- Projet cohérent et sécurisé avec ratios financiers conformes aux standards bancaires\n")
-            f.write("- Gestion proactive des risques avec marge de sécurité intégrée\n")
-            f.write("- Cashflow positif ou déficit faible compensé par apport ou revenu personnel\n")
+            for line in self._bank_conclusion(results):
+                f.write(f"- {line}\n")
+            f.write("\n")
                         # --- Ajouter les graphiques ---
             pie_file = "charges_pie.png"
             payback_file = "payback_period.png"
@@ -347,6 +347,28 @@ class InvestmentPresenter:
     
 
 
+
+    @staticmethod
+    def _bank_conclusion(results: Dict[str, Any]) -> list:
+        """Conclusion du rapport, cohérente avec le score de la recommandation."""
+        color = results.get("rec_color")
+        cashflow = results.get("monthly_cashflow", 0.0)
+        debt = results.get("adjusted_debt_ratio", 0.0)
+        if color == "green":
+            lines = ["Projet cohérent, ratios financiers conformes aux standards bancaires",
+                     "Marge de sécurité présente sur les principaux indicateurs"]
+        elif color == "orange":
+            lines = ["Projet viable mais avec une marge de sécurité réduite",
+                     "Certains indicateurs sont à améliorer avant présentation (voir conseils ci-dessus)"]
+        else:
+            lines = ["Projet risqué en l'état : plusieurs indicateurs sont hors des standards bancaires",
+                     "Revoir le prix, l'apport ou le loyer avant de présenter le dossier"]
+        if cashflow >= 0:
+            lines.append(f"Cashflow positif : {cashflow:,.0f} €/mois")
+        else:
+            lines.append(f"Effort d'épargne mensuel de {-cashflow:,.0f} € à couvrir par le revenu personnel")
+        lines.append(f"Taux d'endettement : {debt:.1f} %")
+        return lines
 
     @staticmethod
     def _get_formula_explanation(label_text: str) -> str:
