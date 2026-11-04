@@ -28,7 +28,7 @@ class InvestmentPresenter:
         """Triggered when the user clicks 'Calculer'."""
         try:
             inputs = self.view.get_all_inputs()
-            prop_type = self.view.get_property_type()
+            inputs["Type de bien"] = self.view.get_property_type()
             results = self.model.compute(inputs)
             
             # update recommendation
