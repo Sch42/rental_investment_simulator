@@ -927,6 +927,7 @@ class InvestmentModel:
             "equity": self.equity,
             "price_per_m2": self.price_carrez,
             "total_loan_cost": total_loan_cost,
+            "credit_cost": total_loan_cost - self.loan_amount,
             "adjusted_debt_ratio": adjusted_debt_ratio,
             "pie_data": pie_data,
             "cumulative_cashflow": cumulative_cashflow,

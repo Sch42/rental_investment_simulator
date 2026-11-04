@@ -415,7 +415,7 @@ class InvestmentView(ctk.CTk):
             val = values[selected_index]
             name = labels[selected_index]
             pct = val / sum(values) * 100 if sum(values) > 0 else 0.0
-            self.center_text = self.ax.text(0, 0, f"{name}\n{val:,.0f}\n({pct:.1f}%)€",
+            self.center_text = self.ax.text(0, 0, f"{name}\n{val:,.0f}€\n({pct:.1f}%)",
                                             ha="center", va="center", fontsize=12, fontweight='bold')
         else:
             self.center_text = self.ax.text(0, 0, "", ha="center", va="center", fontsize=12, fontweight='bold')
